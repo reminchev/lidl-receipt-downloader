@@ -1055,28 +1055,23 @@ class LidlGUI:
                         if 'x' in product_name.lower() or 'х' in product_name.lower():
                             continue
                         
-                        # Проверка дали е килограмов продукт
-                        product_upper = product_name.upper()
-                        is_kg_product = any(indicator in product_upper for indicator in 
-                                          ['НА КГ', 'НА КГ.', '/КГ', ' КГ', 'НА KG', 'НА KG.', '/KG', ' KG']) or \
-                                       product_upper.endswith('КГ') or product_upper.endswith('KG')
-                        
                         final_price = price
                         
-                        # Ако е килограмов продукт, търсим цената за кг в предишния ред
-                        if is_kg_product and i > 0:
+                        # Проверяваме дали на предходния ред има шаблон "количество x единична_цена"
+                        # Това се прилага за всички продукти (на КГ, на бройки и др.)
+                        if i > 0:
                             prev_line = lines[i-1].strip()
-                            # Формат: "количество x цена_за_кг" (напр. "1,012 x 1,99" или "0,890 x 2,55")
-                            kg_pattern = r'(\d+[\.,]\d+)\s*[xх]\s*(\d+[\.,]\d{2})'
-                            kg_match = re.search(kg_pattern, prev_line)
+                            # Формат: "количество x единична_цена" (напр. "3,000 x 3,37" или "0,890 x 2,55")
+                            unit_price_pattern = r'(\d+[\.,]\d+)\s*[xх]\s*(\d+[\.,]\d{2})'
+                            unit_match = re.search(unit_price_pattern, prev_line)
                             
-                            if kg_match:
-                                # Използваме цената за кг вместо крайната цена
-                                price_per_kg_str = kg_match.group(2).replace(',', '.')
+                            if unit_match:
+                                # Използваме единичната цена вместо крайната цена
+                                unit_price_str = unit_match.group(2).replace(',', '.')
                                 try:
-                                    price_per_kg = float(price_per_kg_str)
+                                    unit_price = float(unit_price_str)
                                     # Конвертиране на цена ако е нужно
-                                    final_price = price_per_kg / conversion_rate
+                                    final_price = unit_price / conversion_rate
                                 except ValueError:
                                     # Ако не може да се парсне, използваме оригиналната цена
                                     final_price = price / conversion_rate
@@ -1084,7 +1079,7 @@ class LidlGUI:
                                 # Ако не намерим шаблона, използваме оригиналната цена
                                 final_price = price / conversion_rate
                         else:
-                            # Конвертиране на цена ако е нужно (за не-килограмови продукти)
+                            # Конвертиране на цена ако е нужно
                             final_price = price / conversion_rate
                         
                         # Съхраняване на данните
