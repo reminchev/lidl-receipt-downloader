@@ -15,6 +15,9 @@ import tkinter as tk
 from tkinter import ttk, filedialog, scrolledtext, messagebox
 from tkcalendar import DateEntry
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 
 class LidlReceiptDownloader:
@@ -925,6 +928,15 @@ class LidlGUI:
             
             self.log_message(f"\n✓ XLSX файлът е създаден успешно!")
             self.log_message(f"  Файл: {output_file}")
+            
+            # Генериране на графика
+            self.log_message(f"\n📊 Генериране на графика...")
+            chart_file = self.generate_chart(output_file)
+            
+            if chart_file:
+                self.log_message(f"✓ Графиката е създадена успешно!")
+                self.log_message(f"  Файл: {chart_file}")
+            
             self.update_status("✓ Анализ завършен", "green")
             
             messagebox.showinfo(
@@ -932,7 +944,8 @@ class LidlGUI:
                 f"Анализът завърши успешно!\n\n"
                 f"Артикули с повече от 1 покупка: {len(filtered_products)}\n"
                 f"Общо уникални артикули: {len(products_data)}\n\n"
-                f"Файл: {os.path.basename(output_file)}"
+                f"XLSX: {os.path.basename(output_file)}\n"
+                f"Графика: {os.path.basename(chart_file) if chart_file else 'N/A'}"
             )
             
         except Exception as e:
@@ -1132,7 +1145,10 @@ class LidlGUI:
         # Добавяне на дати като колони
         for idx, date in enumerate(sorted_dates, start=2):
             col_letter = get_column_letter(idx)
-            ws[f'{col_letter}1'] = date
+            # Форматиране на датата за по-добра четливост (DD.MM.YYYY)
+            date_obj = datetime.strptime(date, '%Y-%m-%d')
+            formatted_date = date_obj.strftime('%d.%m.%Y')
+            ws[f'{col_letter}1'] = formatted_date
             ws[f'{col_letter}1'].font = Font(bold=True, size=11, color="FFFFFF")
             ws[f'{col_letter}1'].fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
             ws[f'{col_letter}1'].alignment = Alignment(horizontal='center', vertical='center')
@@ -1186,6 +1202,123 @@ class LidlGUI:
         wb.save(output_file)
         
         return output_file
+    
+    def generate_chart(self, xlsx_file):
+        """
+        Генерира графика на промяната на цените във времето от XLSX файл
+        """
+        try:
+            import openpyxl
+            from datetime import datetime
+            
+            # Четене на XLSX файла
+            wb = openpyxl.load_workbook(xlsx_file)
+            ws = wb.active
+            
+            # Извличане на дати от хедъра (ред 1, от колона 2 нататък)
+            dates = []
+            for col in range(2, ws.max_column + 1):
+                date_str = ws.cell(row=1, column=col).value
+                if date_str:
+                    try:
+                        date_obj = datetime.strptime(date_str, "%d.%m.%Y")
+                        dates.append(date_obj)
+                    except:
+                        continue
+            
+            if not dates:
+                self.log_message("⚠ Не са намерени дати в XLSX файла")
+                return None
+            
+            # Първо - преброяваме продуктите с повече от 5 цени
+            products_with_enough_data = []
+            
+            for row_idx in range(2, ws.max_row + 1):
+                product_name = ws.cell(row=row_idx, column=1).value
+                if not product_name:
+                    continue
+                
+                # Броене на попълнени цени за този продукт
+                price_count = 0
+                prices = []
+                valid_dates = []
+                
+                for col_idx, date in enumerate(dates, start=2):
+                    price_value = ws.cell(row=row_idx, column=col_idx).value
+                    if price_value is not None:
+                        price_count += 1
+                        prices.append(float(price_value))
+                        valid_dates.append(date)
+                
+                # Добавяме само ако има повече от 5 цени
+                if price_count > 5:
+                    products_with_enough_data.append({
+                        'name': product_name,
+                        'dates': valid_dates,
+                        'prices': prices
+                    })
+            
+            if not products_with_enough_data:
+                self.log_message("⚠ Няма продукти с повече от 5 ценови записа")
+                return None
+            
+            self.log_message(f"✓ Намерени {len(products_with_enough_data)} продукта с повече от 5 цени")
+            
+            # Подготовка на фигурата - увеличаваме височината ако има много продукти
+            fig_height = max(8, min(20, 8 + len(products_with_enough_data) * 0.3))
+            plt.style.use('seaborn-v0_8-darkgrid')
+            fig, ax = plt.subplots(figsize=(16, fig_height))
+            
+            # Рисуване на линии за всички продукти с достатъчно данни
+            for product_data in products_with_enough_data:
+                product_name = product_data['name']
+                valid_dates = product_data['dates']
+                prices = product_data['prices']
+                
+                # Съкращаване на името на продукта за легендата
+                short_name = product_name[:35] + '...' if len(product_name) > 35 else product_name
+                ax.plot(valid_dates, prices, marker='o', linewidth=2, markersize=5, label=short_name, alpha=0.8)
+            
+            # Форматиране на графиката
+            ax.set_xlabel('Дата', fontsize=12, weight='bold')
+            ax.set_ylabel('Цена (€)', fontsize=12, weight='bold')
+            ax.set_title(f'Промяна на цените на продуктите във времето (продукти с повече от 5 записа: {len(products_with_enough_data)})', 
+                        fontsize=14, weight='bold', pad=20)
+            
+            # Форматиране на оста X с дати
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%d.%m.%Y'))
+            ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+            plt.xticks(rotation=45, ha='right')
+            
+            # Добавяне на легенда - адаптивно разположение
+            if len(products_with_enough_data) <= 15:
+                ax.legend(loc='best', fontsize=8, framealpha=0.9, ncol=1)
+            else:
+                # Ако има много продукти, правим легендата на колони
+                ncols = min(3, (len(products_with_enough_data) + 9) // 10)
+                ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1), fontsize=7, framealpha=0.9, ncol=ncols)
+            
+            # Grid за по-добра четливост
+            ax.grid(True, alpha=0.3)
+            
+            # Tight layout за избягване на отрязване
+            plt.tight_layout()
+            
+            # Генериране на име на файла за графиката
+            base_name = os.path.splitext(xlsx_file)[0]
+            chart_file = f"{base_name}_chart.png"
+            
+            # Запазване на графиката с високо качество
+            plt.savefig(chart_file, dpi=200, bbox_inches='tight')
+            plt.close(fig)
+            
+            self.log_message(f"✓ Графиката включва {len(products_with_enough_data)} продукта")
+            
+            return chart_file
+            
+        except Exception as e:
+            self.log_message(f"❌ Грешка при генериране на графика: {e}")
+            return None
 
 
 def main():
