@@ -1,6 +1,29 @@
 # Lidl Receipt Downloader 🧾
 
+[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
+[![Playwright](https://img.shields.io/badge/Playwright-1.40%2B-green.svg)](https://playwright.dev/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20Mac-lightgrey.svg)]()
+
 Автоматично изтегляне на всички касови бележки от Lidl.bg с графичен интерфейс и филтриране по дата.
+
+![GUI Preview](https://img.shields.io/badge/GUI-Tkinter-orange.svg)
+![Date Picker](https://img.shields.io/badge/DatePicker-tkcalendar-blueviolet.svg)
+
+## 🎯 Бързо начало
+
+```bash
+# 1. Клонирай
+git clone https://github.com/YOUR_USERNAME/lidl-receipt-downloader.git
+cd lidl-receipt-downloader
+
+# 2. Инсталирай
+pip install -r requirements.txt
+playwright install chromium
+
+# 3. Стартирай
+python lidl_scraper_gui.py
+```
 
 ## ✨ Функции
 
