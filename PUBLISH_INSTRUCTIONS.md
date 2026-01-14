@@ -21,13 +21,13 @@
 
 ### Стъпка 2: Свържете с GitHub
 
-След създаване на repo, изпълнете следните команди (заменете YOUR_USERNAME с вашето GitHub име):
+След създаване на repo, изпълнете следните команди:
 
 ```powershell
 cd "D:\Dev Projects\lidl-receipt-downloader"
 
 # Добавете remote
-git remote add origin https://github.com/YOUR_USERNAME/lidl-receipt-downloader.git
+git remote add origin https://github.com/reminchev/lidl-receipt-downloader.git
 
 # Преименувайте branch на main
 git branch -M main
@@ -97,10 +97,10 @@ git push -u origin main
 
 ## ⚡ Бърза команда за Push:
 
-Копирайте и изпълнете (заменете YOUR_USERNAME):
+Копирайте и изпълнете:
 
 ```powershell
-git remote add origin https://github.com/YOUR_USERNAME/lidl-receipt-downloader.git
+git remote add origin https://github.com/reminchev/lidl-receipt-downloader.git
 git branch -M main
 git push -u origin main
 ```

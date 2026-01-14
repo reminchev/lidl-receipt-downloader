@@ -33,8 +33,8 @@ python, playwright, tkinter, web-scraping, automation, lidl, receipt-downloader,
 ```powershell
 cd "D:\Dev Projects\lidl-receipt-downloader"
 
-# Добавете remote origin (заменете YOUR_USERNAME с вашето GitHub потребителско име)
-git remote add origin https://github.com/YOUR_USERNAME/lidl-receipt-downloader.git
+# Добавете remote origin
+git remote add origin https://github.com/reminchev/lidl-receipt-downloader.git
 
 # Преименувайте главния branch на main (ако е необходимо)
 git branch -M main
@@ -96,6 +96,19 @@ Python приложение с графичен интерфейс за авто
 • tkcalendar (date picker)
 
 📦 Лесна инсталация и употреба - вижте README за детайли!
+```
+
+---
+
+---
+
+## 🚀 Готови команди за публикуване:
+
+```powershell
+cd "D:\Dev Projects\lidl-receipt-downloader"
+git remote add origin https://github.com/reminchev/lidl-receipt-downloader.git
+git branch -M main
+git push -u origin main
 ```
 
 ---

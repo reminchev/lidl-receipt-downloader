@@ -14,7 +14,7 @@
 
 ```bash
 # 1. Клонирай
-git clone https://github.com/YOUR_USERNAME/lidl-receipt-downloader.git
+git clone https://github.com/reminchev/lidl-receipt-downloader.git
 cd lidl-receipt-downloader
 
 # 2. Инсталирай
@@ -43,7 +43,7 @@ python lidl_scraper_gui.py
 ### Стъпка 1: Клониране на репозиторито
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/lidl-receipt-downloader.git
+git clone https://github.com/reminchev/lidl-receipt-downloader.git
 cd lidl-receipt-downloader
 ```
 
