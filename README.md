@@ -11,16 +11,32 @@
 
 ## 🎯 Бързо начало
 
-```bash
-# 1. Клонирай
+### Автоматична инсталация и стартиране
+
+**Windows:**
+```powershell
 git clone https://github.com/reminchev/lidl-receipt-downloader.git
 cd lidl-receipt-downloader
+.\setup.ps1
+.\run.bat
+```
 
-# 2. Инсталирай
-pip install -r requirements.txt
+**Linux/macOS:**
+```bash
+git clone https://github.com/reminchev/lidl-receipt-downloader.git
+cd lidl-receipt-downloader
+chmod +x setup.sh run.sh
+./setup.sh
+./run.sh
+```
+
+**Conda:**
+```bash
+git clone https://github.com/reminchev/lidl-receipt-downloader.git
+cd lidl-receipt-downloader
+conda env create -f environment.yml
+conda activate lidl-downloader
 playwright install chromium
-
-# 3. Стартирай
 python lidl_scraper_gui.py
 ```
 
