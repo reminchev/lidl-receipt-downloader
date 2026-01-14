@@ -47,7 +47,24 @@ python lidl_scraper_gui.py
 - Python 3.8 или по-нова версия
 - Windows, Linux или macOS
 
-### Стъпки
+### Опция 1: Автоматична инсталация (препоръчително)
+
+**Windows:**
+```powershell
+git clone https://github.com/reminchev/lidl-receipt-downloader.git
+cd lidl-receipt-downloader
+.\setup.ps1
+```
+
+**Linux/macOS:**
+```bash
+git clone https://github.com/reminchev/lidl-receipt-downloader.git
+cd lidl-receipt-downloader
+chmod +x setup.sh
+./setup.sh
+```
+
+### Опция 2: Ръчна инсталация с venv
 
 **1. Клонирайте репозиторито**
 
@@ -56,10 +73,39 @@ git clone https://github.com/reminchev/lidl-receipt-downloader.git
 cd lidl-receipt-downloader
 ```
 
-**2. Инсталирайте зависимостите**
+**2. Създайте виртуална среда**
+
+```bash
+# Windows
+python -m venv venv
+.\venv\Scripts\activate
+
+# Linux/macOS
+python3 -m venv venv
+source venv/bin/activate
+```
+
+**3. Инсталирайте зависимостите**
 
 ```bash
 pip install -r requirements.txt
+playwright install chromium
+```
+
+### Опция 3: Инсталация с Conda
+
+**1. Клонирайте репозиторито**
+
+```bash
+git clone https://github.com/reminchev/lidl-receipt-downloader.git
+cd lidl-receipt-downloader
+```
+
+**2. Създайте conda среда**
+
+```bash
+conda env create -f environment.yml
+conda activate lidl-downloader
 ```
 
 **3. Инсталирайте Playwright браузъри**
@@ -74,6 +120,24 @@ playwright install chromium
 
 ### Стартиране
 
+**Ако използвате venv:**
+```bash
+# Windows
+.\venv\Scripts\activate
+python lidl_scraper_gui.py
+
+# Linux/macOS
+source venv/bin/activate
+python lidl_scraper_gui.py
+```
+
+**Ако използвате conda:**
+```bash
+conda activate lidl-downloader
+python lidl_scraper_gui.py
+```
+
+**Без виртуална среда:**
 ```bash
 python lidl_scraper_gui.py
 ```
