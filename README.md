@@ -9,36 +9,41 @@
 
 ---
 
-## 🎯 Бързо начало
+## 🎯 Бързо начало - ЕДНО КЛИКВАНЕ! 🚀
 
-### Автоматична инсталация и стартиране
+### ⚡ Направо изтегли и стартирай - НЯМА нужда от инсталация!
 
 **Windows:**
 ```powershell
+# 1. Изтегли проекта
 git clone https://github.com/reminchev/lidl-receipt-downloader.git
 cd lidl-receipt-downloader
-.\setup.ps1
-.\run.bat
+
+# 2. Стартирай с двоен клик на:
+start.bat
+# или
+.\start.ps1
 ```
 
 **Linux/macOS:**
 ```bash
+# 1. Изтегли проекта
 git clone https://github.com/reminchev/lidl-receipt-downloader.git
 cd lidl-receipt-downloader
-chmod +x setup.sh run.sh
-./setup.sh
-./run.sh
+
+# 2. Направи изпълними и стартирай
+chmod +x start.sh
+./start.sh
 ```
 
-**Conda:**
-```bash
-git clone https://github.com/reminchev/lidl-receipt-downloader.git
-cd lidl-receipt-downloader
-conda env create -f environment.yml
-conda activate lidl-downloader
-playwright install chromium
-python lidl_scraper_gui.py
-```
+> **✨ Новата версия автоматично:**
+> - ✅ Проверява за Python
+> - ✅ Създава виртуална среда
+> - ✅ Инсталира всички зависимости
+> - ✅ Инсталира Playwright браузъра
+> - ✅ Стартира приложението
+>
+> **Просто изпълни `start.bat` или `start.ps1` и всичко се случва автоматично!**
 
 ---
 
@@ -56,28 +61,31 @@ python lidl_scraper_gui.py
 
 ---
 
-## 📦 Инсталация
+## 📦 Алтернативни методи за инсталация
+
+> **💡 Препоръка:** Използвайте новите `start.bat` или `start.ps1` скриптове, които автоматично правят всичко за вас!
 
 ### Изисквания
 
 - Python 3.8 или по-нова версия
 - Windows, Linux или macOS
 
-### Опция 1: Автоматична инсталация (препоръчително)
+### Опция 1: Автоматичен старт с инсталация (ПРЕПОРЪЧИТЕЛНО ⚡)
 
 **Windows:**
 ```powershell
 git clone https://github.com/reminchev/lidl-receipt-downloader.git
 cd lidl-receipt-downloader
-.\setup.ps1
+# Двоен клик на start.bat или:
+.\start.ps1
 ```
 
 **Linux/macOS:**
 ```bash
 git clone https://github.com/reminchev/lidl-receipt-downloader.git
 cd lidl-receipt-downloader
-chmod +x setup.sh
-./setup.sh
+chmod +x start.sh
+./start.sh
 ```
 
 ### Опция 2: Ръчна инсталация с venv
