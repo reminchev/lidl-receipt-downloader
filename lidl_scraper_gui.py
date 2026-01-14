@@ -7,8 +7,10 @@ import asyncio
 import os
 import threading
 import time
+import re
 from datetime import datetime
 from pathlib import Path
+from collections import defaultdict
 import tkinter as tk
 from tkinter import ttk, filedialog, scrolledtext, messagebox
 from tkcalendar import DateEntry
@@ -38,7 +40,6 @@ class LidlReceiptDownloader:
     def parse_receipt_date(self, text_content):
         """Извлича датата от касовата бележка"""
         try:
-            import re
             # Търсим дата във формат DD.MM.YYYY HH:MM:SS
             date_pattern = r'(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})'
             match = re.search(date_pattern, text_content)
@@ -47,7 +48,7 @@ class LidlReceiptDownloader:
                 # Конвертираме във формат YYYY-MM-DD за сравнение
                 parts = date_str.split('.')
                 return f"{parts[2]}-{parts[1]}-{parts[0]}"
-        except:
+        except (AttributeError, IndexError, ValueError):
             pass
         return None
     
@@ -407,12 +408,13 @@ class LidlGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Lidl Receipt Downloader")
-        self.root.geometry("800x800")
+        self.root.geometry("800x850")
         self.root.resizable(True, True)
         
         self.downloader = None
         self.download_thread = None
         self.output_dir = str(Path.home() / "Documents")
+        self.analysis_file = None
         
         self.setup_ui()
         
@@ -509,9 +511,29 @@ class LidlGUI:
         
         dir_frame.columnconfigure(0, weight=1)
         
+        # Рамка за файл за анализ
+        analysis_frame = ttk.LabelFrame(self.root, text="Файл за анализ на цени", padding="10")
+        analysis_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+        
+        self.analysis_file_label = ttk.Label(
+            analysis_frame, 
+            text="Няма избран файл", 
+            foreground="gray"
+        )
+        self.analysis_file_label.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=5)
+        
+        self.analysis_file_button = ttk.Button(
+            analysis_frame, 
+            text="📄 Избери файл за анализ", 
+            command=self.choose_analysis_file
+        )
+        self.analysis_file_button.grid(row=0, column=1, padx=5)
+        
+        analysis_frame.columnconfigure(0, weight=1)
+        
         # Рамка за контроли
         control_frame = ttk.Frame(self.root, padding="10")
-        control_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+        control_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
         
         self.start_button = ttk.Button(
             control_frame, 
@@ -538,6 +560,15 @@ class LidlGUI:
         )
         self.continue_button.grid(row=0, column=2, padx=5)
         
+        # Бутон за анализ
+        self.analyze_button = ttk.Button(
+            control_frame, 
+            text="📊 Анализ → XLSX", 
+            command=self.analyze_receipts,
+            style="Accent.TButton"
+        )
+        self.analyze_button.grid(row=0, column=3, padx=5)
+        
         # Статус лейбъл
         self.status_label = ttk.Label(
             control_frame, 
@@ -545,7 +576,7 @@ class LidlGUI:
             foreground="green",
             font=("Arial", 10, "bold")
         )
-        self.status_label.grid(row=0, column=3, padx=15)
+        self.status_label.grid(row=0, column=4, padx=15)
         
         # Таймер лейбъл
         self.timer_label = ttk.Label(
@@ -554,11 +585,11 @@ class LidlGUI:
             foreground="blue",
             font=("Arial", 10)
         )
-        self.timer_label.grid(row=0, column=4, padx=5)
+        self.timer_label.grid(row=0, column=5, padx=5)
         
         # Рамка за прогрес барове
         progress_frame = ttk.LabelFrame(self.root, text="Прогрес", padding="10")
-        progress_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+        progress_frame.grid(row=5, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
         
         # Първи прогрес бар - страници
         ttk.Label(progress_frame, text="Прогрес по страници:").grid(row=0, column=0, sticky=tk.W, pady=2)
@@ -590,7 +621,7 @@ class LidlGUI:
         
         # Рамка за логове
         log_frame = ttk.LabelFrame(self.root, text="Прогрес и логове", padding="10")
-        log_frame.grid(row=5, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=10, pady=5)
+        log_frame.grid(row=6, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=10, pady=5)
         
         self.log_text = scrolledtext.ScrolledText(
             log_frame, 
@@ -605,7 +636,7 @@ class LidlGUI:
         
         # Конфигурация на grid weights
         self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(5, weight=1)
+        self.root.rowconfigure(6, weight=1)
         
         # Стилове
         style = ttk.Style()
@@ -634,6 +665,20 @@ class LidlGUI:
             self.output_dir = directory
             self.dir_label.config(text=directory)
             self.log_message(f"✓ Избрана директория: {directory}")
+    
+    def choose_analysis_file(self):
+        """Избира файл за анализ"""
+        file_path = filedialog.askopenfilename(
+            title="Избери файл с касови бележки за анализ",
+            initialdir=self.output_dir,
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+        )
+        if file_path:
+            self.analysis_file = file_path
+            # Показваме само името на файла, не целия път (за да се побере в интерфейса)
+            file_name = os.path.basename(file_path)
+            self.analysis_file_label.config(text=file_name, foreground="blue")
+            self.log_message(f"✓ Избран файл за анализ: {file_name}")
     
     def log_message(self, message):
         """Добавя съобщение в лог текста"""
@@ -814,6 +859,338 @@ class LidlGUI:
         self.start_date_entry.config(state=tk.NORMAL)
         self.end_date_entry.config(state=tk.NORMAL)
         self.dir_button.config(state=tk.NORMAL)
+    
+    def analyze_receipts(self):
+        """Анализира касовите бележки и създава XLSX файл с история на цените"""
+        # Проверка дали е избран файл
+        if not self.analysis_file:
+            # Ако няма избран файл, отваряме диалог
+            file_path = filedialog.askopenfilename(
+                title="Избери файл с касови бележки за анализ",
+                initialdir=self.output_dir,
+                filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+            )
+            
+            if not file_path:
+                return
+            
+            self.analysis_file = file_path
+            file_name = os.path.basename(file_path)
+            self.analysis_file_label.config(text=file_name, foreground="blue")
+        else:
+            file_path = self.analysis_file
+        
+        # Проверка дали файлът съществува
+        if not os.path.exists(file_path):
+            messagebox.showerror(
+                "Грешка", 
+                f"Файлът не съществува:\n{file_path}\n\nМоля изберете друг файл."
+            )
+            self.analysis_file = None
+            self.analysis_file_label.config(text="Няма избран файл", foreground="gray")
+            return
+        
+        self.log_message(f"\n📊 Стартиране на анализ на файл: {os.path.basename(file_path)}")
+        self.update_status("📊 Анализ...", "blue")
+        
+        try:
+            # Парсване на файла
+            products_data = self.parse_receipts_file(file_path)
+            
+            if not products_data:
+                messagebox.showwarning("Внимание", "Не са намерени артикули за анализ!")
+                self.update_status("⚠ Няма данни", "orange")
+                return
+            
+            # Филтриране на продукти, които се срещат повече от веднъж
+            filtered_products = {
+                product: dates_prices 
+                for product, dates_prices in products_data.items() 
+                if len(dates_prices) > 1
+            }
+            
+            if not filtered_products:
+                messagebox.showwarning(
+                    "Внимание", 
+                    "Не са намерени артикули, които се срещат повече от веднъж!"
+                )
+                self.update_status("⚠ Няма данни", "orange")
+                return
+            
+            self.log_message(f"✓ Намерени {len(filtered_products)} артикула с повече от 1 покупка")
+            self.log_message(f"  (Общо {len(products_data)} уникални артикула)")
+            
+            # Генериране на XLSX файл
+            output_file = self.generate_xlsx(filtered_products, file_path)
+            
+            self.log_message(f"\n✓ XLSX файлът е създаден успешно!")
+            self.log_message(f"  Файл: {output_file}")
+            self.update_status("✓ Анализ завършен", "green")
+            
+            messagebox.showinfo(
+                "Успех", 
+                f"Анализът завърши успешно!\n\n"
+                f"Артикули с повече от 1 покупка: {len(filtered_products)}\n"
+                f"Общо уникални артикули: {len(products_data)}\n\n"
+                f"Файл: {os.path.basename(output_file)}"
+            )
+            
+        except Exception as e:
+            self.log_message(f"\n❌ Грешка при анализ: {e}")
+            self.update_status("❌ Грешка при анализ", "red")
+            messagebox.showerror("Грешка", f"Грешка при анализ:\n\n{str(e)}")
+    
+    def parse_receipts_file(self, file_path):
+        """Парсва файла с бележки и извлича продукти с дати и цени"""
+        products_data = defaultdict(dict)  # {product_name: {date: price}}
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Разделяне на бележки
+            receipts = content.split('БЕЛЕЖКА #')
+            
+            self.log_message(f"✓ Намерени {len(receipts)-1} бележки за парсинг...")
+            
+            for receipt_idx, receipt in enumerate(receipts[1:], 1):  # Прескачаме първия празен елемент
+                # Извличане на дата - търсим различни формати
+                date_match = None
+                receipt_date_str = None
+                
+                # Формат 1: DD.MM.YYYY HH:MM:SS в края (например "13.01.2026 13:03:32")
+                date_match = re.search(r'(\d{2})\.(\d{2})\.(\d{4})\s+\d{2}:\d{2}:\d{2}', receipt)
+                if date_match:
+                    day, month, year = date_match.groups()
+                    receipt_date_str = f"{year}-{month}-{day}"
+                
+                # Формат 2: YYYY.MM.DD HH:MM (например "2025.12.26 17:24")
+                if not receipt_date_str:
+                    date_match = re.search(r'(\d{4})\.(\d{2})\.(\d{2})\s+\d{2}:\d{2}', receipt)
+                    if date_match:
+                        year, month, day = date_match.groups()
+                        receipt_date_str = f"{year}-{month}-{day}"
+                
+                # Формат 3: В заглавието "DD.месец" (например "13.януари")
+                if not receipt_date_str:
+                    months_bg = {
+                        'януари': '01', 'февруари': '02', 'март': '03', 'април': '04',
+                        'май': '05', 'юни': '06', 'юли': '07', 'август': '08',
+                        'септември': '09', 'октомври': '10', 'ноември': '11', 'декември': '12'
+                    }
+                    for month_name, month_num in months_bg.items():
+                        if month_name in receipt.lower():
+                            day_match = re.search(r'(\d{1,2})\.' + month_name, receipt.lower())
+                            if day_match:
+                                day = day_match.group(1).zfill(2)
+                                # Определяме годината - ако месецът е декември и сме в януари, значи е миналата година
+                                year = '2025' if month_name == 'декември' else '2026'
+                                receipt_date_str = f"{year}-{month_num}-{day}"
+                                break
+                
+                if not receipt_date_str:
+                    self.log_message(f"  ⚠ Пропусната бележка #{receipt_idx} - не може да се извлече дата")
+                    continue
+                
+                try:
+                    receipt_date = datetime.strptime(receipt_date_str, '%Y-%m-%d')
+                except ValueError:
+                    self.log_message(f"  ⚠ Пропусната бележка #{receipt_idx} - невалиден формат на дата: {receipt_date_str}")
+                    continue
+                
+                # Определяне на конверсионен фактор и валута
+                # Проверяваме дали е BGN, лв или Евро
+                is_bgn = 'BGN' in receipt or '# лв' in receipt or 'лв  #' in receipt
+                is_eur = 'Евро' in receipt or '# Евро #' in receipt or 'EUR' in receipt
+                
+                # Ако е преди 01.01.2026, трябва да конвертираме от BGN към EUR
+                if receipt_date < datetime(2026, 1, 1):
+                    # Стари бележки - винаги са в BGN, трябва да конвертираме
+                    conversion_rate = 1.95583
+                else:
+                    # Нови бележки - ако са в BGN, конвертираме, ако са в EUR, оставяме
+                    conversion_rate = 1.95583 if is_bgn else 1.0
+                
+                # Извличане на артикули и цени
+                lines = receipt.split('\n')
+                products_found = 0
+                
+                # Обработка на редовете - запазваме индекса за обработка на килограмови продукти
+                for i, line in enumerate(lines):
+                    # Прескачаме редове с маркери за купони и отстъпки
+                    if any(marker in line for marker in ['#Lidl Plus купон', '#Акция', 'ОТСТЪПКИ', 
+                                                          'МЕЖДИННА СУМА', 'ОБЩА СУМА', 'В БРОЙ',
+                                                          'КРЕДИТНА/ДЕБИТНА', 'РЕСТО', '-----',
+                                                          'Ти спести', '#Ном:', '#Z-отчет:', '#Каса:']):
+                        continue
+                    
+                    # Шаблони за различни формати цени
+                    # Формат 1: "ПРОДУКТ    ЦЕНА B" или "ПРОДУКТ    ЦЕНА лв"
+                    price_pattern1 = r'^([А-ЯA-Z][А-ЯA-ZА-Яа-я\s\.\,\'\"\-\/\(\)0-9]+?)\s{2,}(\d+[\.,]\d{2})\s*[BDлв]*\s*$'
+                    match = re.match(price_pattern1, line.strip())
+                    
+                    if match:
+                        product_name = match.group(1).strip()
+                        price_str = match.group(2).replace(',', '.')
+                        
+                        try:
+                            price = float(price_str)
+                        except ValueError:
+                            continue
+                        
+                        # Прескачаме очевидни не-продукти
+                        skip_keywords = ['ОБЩА', 'ОБЩО', 'ПЛАТЕНО', 'СУМА', 'TOTAL', 'PAID', 'НАЛИЧНОСТ', 
+                                       'МЕЖДИННА', 'ОТСТЪПКИ', 'DISCOUNT', 'БАНКОВА', 'КАРТА',
+                                       'ВАУЧЕР', 'VOUCHER', 'СДАЧА', 'CHANGE', 'РЕСТО', 'В БРОЙ',
+                                       'Ном:', 'Z-отчет', 'Каса:', 'Касиер:', 'АРТИКУЛА', 'Копие']
+                        
+                        if any(keyword in product_name.upper() for keyword in skip_keywords):
+                            continue
+                        
+                        # Прескачаме твърде къси имена
+                        if len(product_name) < 3:
+                            continue
+                        
+                        # Прескачаме редове с количество (напр. "2,000 x 3,37")
+                        if 'x' in product_name.lower() or 'х' in product_name.lower():
+                            continue
+                        
+                        # Проверка дали е килограмов продукт
+                        product_upper = product_name.upper()
+                        is_kg_product = any(indicator in product_upper for indicator in 
+                                          ['НА КГ', 'НА КГ.', '/КГ', ' КГ', 'НА KG', 'НА KG.', '/KG', ' KG']) or \
+                                       product_upper.endswith('КГ') or product_upper.endswith('KG')
+                        
+                        final_price = price
+                        
+                        # Ако е килограмов продукт, търсим цената за кг в предишния ред
+                        if is_kg_product and i > 0:
+                            prev_line = lines[i-1].strip()
+                            # Формат: "количество x цена_за_кг" (напр. "1,012 x 1,99" или "0,890 x 2,55")
+                            kg_pattern = r'(\d+[\.,]\d+)\s*[xх]\s*(\d+[\.,]\d{2})'
+                            kg_match = re.search(kg_pattern, prev_line)
+                            
+                            if kg_match:
+                                # Използваме цената за кг вместо крайната цена
+                                price_per_kg_str = kg_match.group(2).replace(',', '.')
+                                try:
+                                    price_per_kg = float(price_per_kg_str)
+                                    # Конвертиране на цена ако е нужно
+                                    final_price = price_per_kg / conversion_rate
+                                except ValueError:
+                                    # Ако не може да се парсне, използваме оригиналната цена
+                                    final_price = price / conversion_rate
+                            else:
+                                # Ако не намерим шаблона, използваме оригиналната цена
+                                final_price = price / conversion_rate
+                        else:
+                            # Конвертиране на цена ако е нужно (за не-килограмови продукти)
+                            final_price = price / conversion_rate
+                        
+                        # Съхраняване на данните
+                        products_data[product_name][receipt_date_str] = final_price
+                        products_found += 1
+                
+                if products_found > 0:
+                    self.log_message(f"  ✓ Бележка #{receipt_idx} ({receipt_date_str}): {products_found} артикула")
+            
+            self.log_message(f"\n✓ Общо обработени: {len(products_data)} уникални артикула")
+            return products_data
+            
+        except Exception as e:
+            raise Exception(f"Грешка при четене на файла: {e}")
+    
+    def generate_xlsx(self, products_data, source_file):
+        """Генерира XLSX файл с анализ на цените"""
+        try:
+            import openpyxl
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+            from openpyxl.utils import get_column_letter
+        except ImportError:
+            messagebox.showerror(
+                "Грешка", 
+                "Библиотеката 'openpyxl' не е инсталирана!\n\n"
+                "Моля инсталирайте я с командата:\n"
+                "pip install openpyxl"
+            )
+            raise ImportError("openpyxl is not installed")
+        
+        # Създаване на работна книга
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Price History"
+        
+        # Събиране на всички уникални дати и сортиране
+        all_dates = set()
+        for dates_prices in products_data.values():
+            all_dates.update(dates_prices.keys())
+        
+        sorted_dates = sorted(all_dates)
+        
+        # Създаване на хедър
+        ws['A1'] = "Артикул"
+        ws['A1'].font = Font(bold=True, size=12)
+        ws['A1'].fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        ws['A1'].font = Font(bold=True, size=12, color="FFFFFF")
+        ws['A1'].alignment = Alignment(horizontal='left', vertical='center')
+        
+        # Добавяне на дати като колони
+        for idx, date in enumerate(sorted_dates, start=2):
+            col_letter = get_column_letter(idx)
+            ws[f'{col_letter}1'] = date
+            ws[f'{col_letter}1'].font = Font(bold=True, size=11, color="FFFFFF")
+            ws[f'{col_letter}1'].fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+            ws[f'{col_letter}1'].alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Добавяне на данни за продуктите
+        row_idx = 2
+        for product_name in sorted(products_data.keys()):
+            ws[f'A{row_idx}'] = product_name
+            ws[f'A{row_idx}'].alignment = Alignment(horizontal='left', vertical='center')
+            
+            dates_prices = products_data[product_name]
+            
+            for col_idx, date in enumerate(sorted_dates, start=2):
+                col_letter = get_column_letter(col_idx)
+                
+                if date in dates_prices:
+                    price = dates_prices[date]
+                    cell = ws[f'{col_letter}{row_idx}']
+                    cell.value = price
+                    cell.number_format = '[$€-407] #,##0.00'  # EUR формат
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
+            
+            row_idx += 1
+        
+        # Настройка на ширина на колоните
+        ws.column_dimensions['A'].width = 50
+        for col_idx in range(2, len(sorted_dates) + 2):
+            col_letter = get_column_letter(col_idx)
+            ws.column_dimensions[col_letter].width = 15
+        
+        # Добавяне на бордъри
+        thin_border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        for row in ws.iter_rows(min_row=1, max_row=row_idx-1, min_col=1, max_col=len(sorted_dates)+1):
+            for cell in row:
+                cell.border = thin_border
+        
+        # Замръзване на първия ред и първата колона
+        ws.freeze_panes = 'B2'
+        
+        # Генериране на име на файла
+        base_name = os.path.splitext(source_file)[0]
+        output_file = f"{base_name}_price_analysis.xlsx"
+        
+        # Запазване на файла
+        wb.save(output_file)
+        
+        return output_file
 
 
 def main():
