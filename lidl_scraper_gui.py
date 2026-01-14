@@ -1,0 +1,826 @@
+"""
+Lidl Receipt Downloader - GUI Version
+Автоматично изтегля всички касови бележки от Lidl.bg с филтриране по дата
+"""
+
+import asyncio
+import os
+import threading
+import time
+from datetime import datetime
+from pathlib import Path
+import tkinter as tk
+from tkinter import ttk, filedialog, scrolledtext, messagebox
+from tkcalendar import DateEntry
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
+
+
+class LidlReceiptDownloader:
+    def __init__(self, output_dir: str, start_date=None, end_date=None, log_callback=None, progress_callback=None):
+        self.output_dir = output_dir
+        self.start_date = start_date
+        self.end_date = end_date
+        self.receipts = []
+        self.log_callback = log_callback
+        self.progress_callback = progress_callback
+        self.is_cancelled = False
+        self.ready_to_start = False
+        self.total_pages_estimated = 100  # Оценка - 10 бележки на страница
+        self.current_page_processed = 0
+        self.start_time = None
+        
+    def log(self, message):
+        """Логване на съобщение"""
+        if self.log_callback:
+            self.log_callback(message)
+        print(message)
+    
+    def parse_receipt_date(self, text_content):
+        """Извлича датата от касовата бележка"""
+        try:
+            import re
+            # Търсим дата във формат DD.MM.YYYY HH:MM:SS
+            date_pattern = r'(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})'
+            match = re.search(date_pattern, text_content)
+            if match:
+                date_str = match.group(1)
+                # Конвертираме във формат YYYY-MM-DD за сравнение
+                parts = date_str.split('.')
+                return f"{parts[2]}-{parts[1]}-{parts[0]}"
+        except:
+            pass
+        return None
+    
+    def is_date_in_range(self, receipt_date_str):
+        """Проверява дали датата е в избрания период"""
+        if not self.start_date and not self.end_date:
+            return True
+        
+        if not receipt_date_str:
+            return True  # Ако не можем да извлечем дата, включваме бележката
+        
+        try:
+            if self.start_date and receipt_date_str < self.start_date:
+                return False
+            if self.end_date and receipt_date_str > self.end_date:
+                return False
+            return True
+        except:
+            return True
+    
+    async def wait_for_user_ready(self, page):
+        """Изчаква потребителя да се позиционира на страницата с касови бележки"""
+        self.log("📌 ИНСТРУКЦИИ:")
+        self.log("=" * 60)
+        self.log("1. Влезте в акаунта си в отворения браузър")
+        self.log("2. Отидете на страницата с касови бележки")
+        self.log("   (https://www.lidl.bg/mre/purchase-history)")
+        self.log("3. Натиснете 'Започни изтегляне' когато сте готови")
+        self.log("=" * 60)
+        
+        try:
+            await page.goto('https://accounts.lidl.com/Account/Login?ReturnUrl=%2Fconnect%2Fauthorize%2Fcallback%3Fcountry_code%3DBG%26response_type%3Dcode%26client_id%3Dbulgariaretailclient%26scope%3Dopenid%2520profile%2520Lidl.Authentication%2520offline_access%26state%3D7kjyF6Xd4NaMWmVqiNhXmDlKvTzcOa23tPkuFORkF2E%253D%26redirect_uri%3Dhttps%253A%252F%252Fwww.lidl.bg%252Fuser-api%252Fsignin-oidc%26nonce%3DEJIGNwoTYnT5BTScAf8yndJ6_tfF5V-ag26aqBsTg-8%26step%3Dlogin%26language%3Dbg-BG#login', wait_until='networkidle')
+            
+            self.log("\n⏳ Изчакване на потребителя...")
+            self.log("   Моля, влезте и отидете на страницата с касови бележки\n")
+            
+            # Изчакваме сигнал за продължаване
+            while not self.ready_to_start and not self.is_cancelled:
+                await asyncio.sleep(0.5)
+            
+            if self.is_cancelled:
+                return
+            
+            self.log("✓ Стартиране на изтегляне на бележки...")
+            self.start_time = time.time()
+            await asyncio.sleep(1)
+            
+        except Exception as e:
+            self.log(f"❌ Грешка: {e}")
+            raise
+    
+    async def navigate_to_purchase_history(self, page, page_num=1):
+        """Отива до страницата с покупки"""
+        url = f'https://www.lidl.bg/mre/purchase-history?client_id=BulgariaRetailClient&country_code=bg&language=bg-BG&page={page_num}'
+        self.log(f"Отваряне на история на покупките (страница {page_num})...")
+        await page.goto(url, wait_until='networkidle')
+        await asyncio.sleep(2)
+    
+    async def extract_receipts_from_page(self, page, page_number):
+        """Извлича касовите бележки от текущата страница"""
+        self.log("Извличане на касови бележки...")
+        
+        try:
+            await asyncio.sleep(3)
+            
+            purchase_selectors = [
+                'a[href*="/mre/purchase-detail"]',
+                'a.card[href*="purchase-detail"]',
+                'a[data-testid][class*="card"]',
+                'a.card',
+                'a[class*="card"][href*="/mre/"]'
+            ]
+            
+            purchase_elements = []
+            for selector in purchase_selectors:
+                elements = await page.query_selector_all(selector)
+                if elements:
+                    purchase_elements = elements
+                    self.log(f"Използван селектор: {selector}")
+                    break
+            
+            if not purchase_elements:
+                purchase_elements = await page.query_selector_all('button, a[href*="purchase"], a[href*="receipt"]')
+            
+            self.log(f"Намерени {len(purchase_elements)} покупки на тази страница")
+            
+            # Предполагаме 10 бележки на страница, коригираме оценката
+            if len(purchase_elements) > 0:
+                self.total_pages_estimated = max(self.total_pages_estimated, page_number + 10)
+            
+            for i in range(len(purchase_elements)):
+                if self.is_cancelled:
+                    self.log("⚠ Процесът е прекъснат от потребителя")
+                    return
+                
+                try:
+                    self.log(f"  Обработка на покупка {i + 1}/{len(purchase_elements)}...")
+                    
+                    await asyncio.sleep(1)
+                    used_selector = 'a.card[href*="purchase-detail"]'
+                    for selector in purchase_selectors:
+                        test_elements = await page.query_selector_all(selector)
+                        if test_elements:
+                            used_selector = selector
+                            break
+                    current_elements = await page.query_selector_all(used_selector)
+                    
+                    if i >= len(current_elements):
+                        self.log(f"  Елемент {i + 1} вече не е достъпен, прескачане...")
+                        continue
+                    
+                    element = current_elements[i]
+                    
+                    await element.scroll_into_view_if_needed()
+                    await asyncio.sleep(0.5)
+                    
+                    await element.click()
+                    await asyncio.sleep(2)
+                    
+                    await page.wait_for_load_state('networkidle', timeout=10000)
+                    await asyncio.sleep(2)
+                    
+                    # Изчакване за зареждане на бележката
+                    await asyncio.sleep(1)
+                    
+                    receipt_selectors = [
+                        'main',
+                        'body'
+                    ]
+                    
+                    text_content = None
+                    for selector in receipt_selectors:
+                        receipt_container = await page.query_selector(selector)
+                        if receipt_container:
+                            text_content = await receipt_container.inner_text()
+                            if text_content and len(text_content.strip()) > 100:
+                                break
+                    
+                    if not text_content:
+                        text_content = await page.inner_text('body')
+                    
+                    # Почистване на ненужен текст от navigation и footer
+                    if text_content:
+                        # Извличаме само основното съдържание на бележката
+                        lines = text_content.split('\n')
+                        # Премахваме първите редове ако са navigation
+                        cleaned_lines = []
+                        start_found = False
+                        for line in lines:
+                            # Търсим начало на бележката (обикновено със БУЛСТАТ или адрес на магазин)
+                            if 'БУЛСТАТ' in line or 'УНП' in line or 'Лидл' in line or not start_found:
+                                start_found = True
+                            if start_found:
+                                cleaned_lines.append(line)
+                        text_content = '\n'.join(cleaned_lines).strip()
+                    
+                    if text_content and text_content.strip():
+                        # Проверка на датата
+                        receipt_date = self.parse_receipt_date(text_content)
+                        
+                        if self.is_date_in_range(receipt_date):
+                            receipt_data = {
+                                'page_number': page_number,
+                                'index': i + 1,
+                                'date': receipt_date,
+                                'content': text_content.strip()
+                            }
+                            self.receipts.append(receipt_data)
+                            date_info = f" ({receipt_date})" if receipt_date else ""
+                            self.log(f"    ✓ Извлечена бележка {i + 1}{date_info} ({len(text_content)} символа)")
+                            self.log(f"    📊 Общо изтеглени бележки: {len(self.receipts)}")
+                        else:
+                            date_info = f" ({receipt_date})" if receipt_date else ""
+                            self.log(f"    ⊗ Пропусната бележка {i + 1}{date_info} - извън период")
+                    else:
+                        self.log(f"    ⚠ Бележка {i + 1} е празна")
+                    
+                    await page.go_back()
+                    await asyncio.sleep(2)
+                    await page.wait_for_load_state('networkidle', timeout=10000)
+                    
+                except PlaywrightTimeout:
+                    self.log(f"  Timeout при обработка на покупка {i + 1}, продължаване...")
+                    try:
+                        await page.go_back()
+                        await asyncio.sleep(2)
+                    except:
+                        pass
+                except Exception as e:
+                    self.log(f"  Грешка при обработка на покупка {i + 1}: {e}")
+                    try:
+                        await page.go_back()
+                        await asyncio.sleep(2)
+                    except:
+                        pass
+                    continue
+                    
+        except Exception as e:
+            self.log(f"Грешка при извличане на бележки: {e}")
+    
+    async def has_more_receipts(self, page):
+        """Проверява дали има още бележки (покупки) на страницата"""
+        try:
+            # Проверка за покупки на страницата
+            purchase_links = await page.query_selector_all('a[href*="/mre/purchase-detail"]')
+            return len(purchase_links) > 0
+        except Exception:
+            return False
+    
+    async def check_current_page_number(self, page):
+        """Извлича текущия номер на страницата от URL"""
+        try:
+            current_url = page.url
+            if 'page=' in current_url:
+                page_param = current_url.split('page=')[1].split('&')[0]
+                return int(page_param)
+            return 1
+        except:
+            return 1
+    
+    async def download_all_receipts(self):
+        """Изтегля всички касови бележки"""
+        async with async_playwright() as p:
+            self.log("Стартиране на браузър...")
+            
+            browser = await p.chromium.launch(headless=False)
+            context = await browser.new_context(
+                viewport={'width': 1920, 'height': 1080},
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            )
+            page = await context.new_page()
+            
+            try:
+                await self.wait_for_user_ready(page)
+                
+                # Получаваме текущия URL за да определим началната страница
+                current_url = page.url
+                page_number = await self.check_current_page_number(page)
+                
+                while not self.is_cancelled:
+                    self.log(f"\n{'=' * 60}")
+                    self.log(f"СТРАНИЦА {page_number}")
+                    self.log(f"{'=' * 60}")
+                    
+                    # Отваряне на страницата с покупки
+                    await self.navigate_to_purchase_history(page, page_number)
+                    
+                    # Проверка дали има покупки на страницата
+                    if not await self.has_more_receipts(page):
+                        self.log(f"\n✓ Няма повече покупки на страница {page_number}")
+                        break
+                    
+                    receipts_before = len(self.receipts)
+                    await self.extract_receipts_from_page(page, page_number)
+                    receipts_after = len(self.receipts)
+                    
+                    self.current_page_processed = page_number
+                    if self.progress_callback:
+                        progress_percent = min(100, (page_number / self.total_pages_estimated) * 100)
+                        elapsed_time = time.time() - self.start_time if self.start_time else 0
+                        self.progress_callback(progress_percent, page_number, self.total_pages_estimated, elapsed_time)
+                    
+                    if self.is_cancelled:
+                        self.log("\n⚠ Процесът е прекъснат")
+                        break
+                    
+                    self.log(f"\n📋 Изтеглени от тази страница: {receipts_after - receipts_before}")
+                    self.log(f"📊 Общо изтеглени бележки: {receipts_after}")
+                    
+                    # Преминаваме към следващата страница
+                    page_number += 1
+                
+                if not self.is_cancelled:
+                    self.log(f"\n{'=' * 60}")
+                    self.log(f"✓ ПРИКЛЮЧЕНО ИЗТЕГЛЯНЕ")
+                    self.log(f"{'=' * 60}")
+                    self.log(f"📊 Общо извлечени бележки: {len(self.receipts)}")
+                    elapsed_time = time.time() - self.start_time if self.start_time else 0
+                    self.log(f"⏱ Общо време: {self.format_time(elapsed_time)}")
+                    self.log(f"{'=' * 60}")
+                
+            except Exception as e:
+                self.log(f"❌ Грешка при изтегляне: {e}")
+                raise
+                
+            finally:
+                await browser.close()
+    
+    def format_time(self, seconds):
+        """Форматира времето в часове:минути:секунди"""
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        secs = int(seconds % 60)
+        if hours > 0:
+            return f"{hours}ч {minutes}м {secs}с"
+        elif minutes > 0:
+            return f"{minutes}м {secs}с"
+        else:
+            return f"{secs}с"
+    
+    def save_to_file(self):
+        """Запазва бележките във файл"""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'lidl_receipts_{timestamp}.txt'
+        filepath = os.path.join(self.output_dir, filename)
+        
+        full_path = os.path.abspath(filepath)
+        
+        self.log(f"\n{'=' * 80}")
+        self.log(f"📝 ЗАПАЗВАНЕ НА БЕЛЕЖКИ")
+        self.log(f"{'=' * 80}")
+        self.log(f"Брой бележки: {len(self.receipts)}")
+        self.log(f"Файл: {filename}")
+        self.log(f"Директория: {self.output_dir}")
+        self.log(f"Пълен път: {full_path}")
+        self.log(f"{'=' * 80}")
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write("=" * 80 + "\n")
+            f.write("КАСОВИ БЕЛЕЖКИ ОТ LIDL.BG\n")
+            f.write(f"Дата на изтегляне: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n")
+            f.write(f"Общо бележки: {len(self.receipts)}\n")
+            if self.start_date or self.end_date:
+                f.write(f"Период: ")
+                if self.start_date:
+                    f.write(f"от {self.start_date} ")
+                if self.end_date:
+                    f.write(f"до {self.end_date}")
+                f.write("\n")
+            f.write("=" * 80 + "\n\n")
+            
+            for i, receipt in enumerate(self.receipts, 1):
+                f.write(f"\n{'=' * 80}\n")
+                f.write(f"БЕЛЕЖКА #{i}\n")
+                f.write(f"Страница: {receipt['page_number']}\n")
+                if receipt.get('date'):
+                    f.write(f"Дата: {receipt['date']}\n")
+                f.write(f"{'=' * 80}\n\n")
+                f.write(receipt['content'])
+                f.write("\n\n")
+        
+        file_size = os.path.getsize(full_path) / 1024  # KB
+        
+        self.log(f"\n{'=' * 80}")
+        self.log(f"✅ УСПЕШНО ЗАВЪРШЕНО!")
+        self.log(f"{'=' * 80}")
+        self.log(f"📊 Общо бележки: {len(self.receipts)}")
+        self.log(f"📁 Файл: {filename}")
+        self.log(f"📂 Пълен път: {full_path}")
+        self.log(f"💾 Размер: {file_size:.2f} KB")
+        self.log(f"{'=' * 60}")
+        
+        return full_path
+
+
+class LidlGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Lidl Receipt Downloader")
+        self.root.geometry("800x800")
+        self.root.resizable(True, True)
+        
+        self.downloader = None
+        self.download_thread = None
+        self.output_dir = str(Path.home() / "Documents")
+        
+        self.setup_ui()
+        
+    def setup_ui(self):
+        """Създава интерфейса"""
+        # Заглавие
+        title_frame = ttk.Frame(self.root, padding="10")
+        title_frame.grid(row=0, column=0, sticky=(tk.W, tk.E))
+        
+        title_label = ttk.Label(
+            title_frame, 
+            text="Lidl Receipt Downloader", 
+            font=("Arial", 16, "bold")
+        )
+        title_label.grid(row=0, column=0, pady=5)
+        
+        subtitle_label = ttk.Label(
+            title_frame, 
+            text="Автоматично изтегляне на касови бележки от Lidl.bg",
+            font=("Arial", 10)
+        )
+        subtitle_label.grid(row=1, column=0, pady=2)
+        
+        # Рамка за период
+        period_frame = ttk.LabelFrame(self.root, text="Период на бележките (опционално)", padding="10")
+        period_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+        
+        ttk.Label(period_frame, text="От дата:").grid(row=0, column=0, sticky=tk.W, pady=5, padx=5)
+        self.start_date_entry = DateEntry(
+            period_frame,
+            width=18,
+            background='darkblue',
+            foreground='white',
+            borderwidth=2,
+            date_pattern='yyyy-mm-dd',
+            state='normal'
+        )
+        self.start_date_entry.grid(row=0, column=1, sticky=(tk.W), pady=5, padx=5)
+        
+        # Бутон за изчистване на начална дата
+        self.clear_start_btn = ttk.Button(
+            period_frame,
+            text="✖",
+            width=3,
+            command=self.clear_start_date
+        )
+        self.clear_start_btn.grid(row=0, column=2, pady=5, padx=2)
+        
+        ttk.Label(period_frame, text="До дата:").grid(row=1, column=0, sticky=tk.W, pady=5, padx=5)
+        self.end_date_entry = DateEntry(
+            period_frame,
+            width=18,
+            background='darkblue',
+            foreground='white',
+            borderwidth=2,
+            date_pattern='yyyy-mm-dd',
+            state='normal'
+        )
+        self.end_date_entry.grid(row=1, column=1, sticky=(tk.W), pady=5, padx=5)
+        
+        # Бутон за изчистване на крайна дата
+        self.clear_end_btn = ttk.Button(
+            period_frame,
+            text="✖",
+            width=3,
+            command=self.clear_end_date
+        )
+        self.clear_end_btn.grid(row=1, column=2, pady=5, padx=2)
+        
+        # Checkbox за използване на период
+        self.use_period_var = tk.BooleanVar(value=False)
+        self.use_period_check = ttk.Checkbutton(
+            period_frame,
+            text="✓ Филтрирай по период",
+            variable=self.use_period_var
+        )
+        self.use_period_check.grid(row=2, column=0, columnspan=3, sticky=tk.W, pady=5, padx=5)
+        
+        period_frame.columnconfigure(3, weight=1)
+        
+        # Рамка за директория
+        dir_frame = ttk.LabelFrame(self.root, text="Директория за съхранение", padding="10")
+        dir_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+        
+        self.dir_label = ttk.Label(dir_frame, text=self.output_dir, foreground="blue")
+        self.dir_label.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=5)
+        
+        self.dir_button = ttk.Button(
+            dir_frame, 
+            text="📁 Избери директория", 
+            command=self.choose_directory
+        )
+        self.dir_button.grid(row=0, column=1, padx=5)
+        
+        dir_frame.columnconfigure(0, weight=1)
+        
+        # Рамка за контроли
+        control_frame = ttk.Frame(self.root, padding="10")
+        control_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+        
+        self.start_button = ttk.Button(
+            control_frame, 
+            text="▶ Старт", 
+            command=self.start_download,
+            style="Accent.TButton"
+        )
+        self.start_button.grid(row=0, column=0, padx=5)
+        
+        self.stop_button = ttk.Button(
+            control_frame, 
+            text="⏸ Прекъсване", 
+            command=self.stop_download,
+            state=tk.DISABLED
+        )
+        self.stop_button.grid(row=0, column=1, padx=5)
+        
+        self.continue_button = ttk.Button(
+            control_frame, 
+            text="✓ Започни изтегляне", 
+            command=self.continue_after_ready,
+            state=tk.DISABLED,
+            style="Accent.TButton"
+        )
+        self.continue_button.grid(row=0, column=2, padx=5)
+        
+        # Статус лейбъл
+        self.status_label = ttk.Label(
+            control_frame, 
+            text="Готов за стартиране",
+            foreground="green",
+            font=("Arial", 10, "bold")
+        )
+        self.status_label.grid(row=0, column=3, padx=15)
+        
+        # Таймер лейбъл
+        self.timer_label = ttk.Label(
+            control_frame, 
+            text="⏱ Време: 0с",
+            foreground="blue",
+            font=("Arial", 10)
+        )
+        self.timer_label.grid(row=0, column=4, padx=5)
+        
+        # Рамка за прогрес барове
+        progress_frame = ttk.LabelFrame(self.root, text="Прогрес", padding="10")
+        progress_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+        
+        # Първи прогрес бар - страници
+        ttk.Label(progress_frame, text="Прогрес по страници:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        self.page_progress = ttk.Progressbar(
+            progress_frame, 
+            mode='determinate',
+            length=400
+        )
+        self.page_progress.grid(row=0, column=1, padx=10, pady=2, sticky=(tk.W, tk.E))
+        
+        self.page_progress_label = ttk.Label(
+            progress_frame, 
+            text="0%",
+            font=("Arial", 9)
+        )
+        self.page_progress_label.grid(row=0, column=2, pady=2)
+        
+        # Втори прогрес бар - бележки
+        ttk.Label(progress_frame, text="Изтеглени бележки:").grid(row=1, column=0, sticky=tk.W, pady=2)
+        self.receipt_label = ttk.Label(
+            progress_frame, 
+            text="0 бележки",
+            font=("Arial", 9, "bold"),
+            foreground="darkgreen"
+        )
+        self.receipt_label.grid(row=1, column=1, sticky=tk.W, padx=10, pady=2)
+        
+        progress_frame.columnconfigure(1, weight=1)
+        
+        # Рамка за логове
+        log_frame = ttk.LabelFrame(self.root, text="Прогрес и логове", padding="10")
+        log_frame.grid(row=5, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=10, pady=5)
+        
+        self.log_text = scrolledtext.ScrolledText(
+            log_frame, 
+            height=20, 
+            width=80,
+            font=("Consolas", 9)
+        )
+        self.log_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        log_frame.columnconfigure(0, weight=1)
+        log_frame.rowconfigure(0, weight=1)
+        
+        # Конфигурация на grid weights
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(5, weight=1)
+        
+        # Стилове
+        style = ttk.Style()
+        try:
+            style.configure("Accent.TButton", font=("Arial", 10, "bold"))
+        except:
+            pass
+    
+    def clear_start_date(self):
+        """Изчиства началната дата"""
+        self.use_period_var.set(False)
+        self.log_message("✓ Изчистена начална дата")
+    
+    def clear_end_date(self):
+        """Изчиства крайната дата"""
+        self.use_period_var.set(False)
+        self.log_message("✓ Изчистена крайна дата")
+    
+    def choose_directory(self):
+        """Избира директория за съхранение"""
+        directory = filedialog.askdirectory(
+            title="Избери директория за съхранение на бележките",
+            initialdir=self.output_dir
+        )
+        if directory:
+            self.output_dir = directory
+            self.dir_label.config(text=directory)
+            self.log_message(f"✓ Избрана директория: {directory}")
+    
+    def log_message(self, message):
+        """Добавя съобщение в лог текста"""
+        def _log():
+            self.log_text.insert(tk.END, message + "\n")
+            self.log_text.see(tk.END)
+        
+        if threading.current_thread() != threading.main_thread():
+            self.root.after(0, _log)
+        else:
+            _log()
+    
+    def update_status(self, message, color="black"):
+        """Обновява статус лейбъла"""
+        def _update():
+            self.status_label.config(text=message, foreground=color)
+        
+        if threading.current_thread() != threading.main_thread():
+            self.root.after(0, _update)
+        else:
+            _update()
+    
+    def update_progress(self, percent, page_num, total_pages, elapsed_time):
+        """Обновява прогрес баровете и таймъра"""
+        def _update():
+            self.page_progress['value'] = percent
+            self.page_progress_label.config(text=f"{int(percent)}% (стр. {page_num}/{total_pages})")
+            
+            receipt_count = len(self.downloader.receipts) if self.downloader else 0
+            self.receipt_label.config(text=f"{receipt_count} бележки")
+            
+            # Обновяване на таймера
+            hours = int(elapsed_time // 3600)
+            minutes = int((elapsed_time % 3600) // 60)
+            seconds = int(elapsed_time % 60)
+            if hours > 0:
+                time_str = f"{hours}ч {minutes}м {seconds}с"
+            elif minutes > 0:
+                time_str = f"{minutes}м {seconds}с"
+            else:
+                time_str = f"{seconds}с"
+            self.timer_label.config(text=f"⏱ Време: {time_str}")
+        
+        if threading.current_thread() != threading.main_thread():
+            self.root.after(0, _update)
+        else:
+            _update()
+    
+    def start_download(self):
+        """Стартира изтеглянето"""
+        if not os.path.exists(self.output_dir):
+            messagebox.showerror("Грешка", "Избраната директория не съществува!")
+            return
+        
+        # Получаване на датите от DateEntry виджетите
+        start_date = None
+        end_date = None
+        
+        if self.use_period_var.get():
+            try:
+                start_date = self.start_date_entry.get_date().strftime('%Y-%m-%d')
+            except:
+                start_date = None
+            
+            try:
+                end_date = self.end_date_entry.get_date().strftime('%Y-%m-%d')
+            except:
+                end_date = None
+            
+            if start_date and end_date and start_date > end_date:
+                messagebox.showerror("Грешка", "Началната дата не може да е след крайната!")
+                return
+        
+        # Деактивиране на контроли
+        self.start_button.config(state=tk.DISABLED)
+        self.stop_button.config(state=tk.NORMAL)
+        self.start_date_entry.config(state=tk.DISABLED)
+        self.end_date_entry.config(state=tk.DISABLED)
+        self.dir_button.config(state=tk.DISABLED)
+        self.continue_button.config(state=tk.NORMAL)
+        
+        # Изчистване на логовете
+        self.log_text.delete(1.0, tk.END)
+        
+        # Нулиране на прогрес баровете
+        self.page_progress['value'] = 0
+        self.page_progress_label.config(text="0%")
+        self.receipt_label.config(text="0 бележки")
+        self.timer_label.config(text="⏱ Време: 0с")
+        
+        self.update_status("⏳ Изчакване за влизане...", "orange")
+        
+        # Създаване на downloader
+        self.downloader = LidlReceiptDownloader(
+            self.output_dir,
+            start_date=start_date,
+            end_date=end_date,
+            log_callback=self.log_message,
+            progress_callback=self.update_progress
+        )
+        
+        # Стартиране в отделна нишка
+        self.download_thread = threading.Thread(target=self.run_download, daemon=True)
+        self.download_thread.start()
+    
+    def run_download(self):
+        """Изпълнява изтеглянето в отделна нишка"""
+        try:
+            # Създаване на нов event loop за тази нишка
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            # Изпълнение на изтеглянето
+            loop.run_until_complete(self.downloader.download_all_receipts())
+            
+            # Запазване на файла
+            if self.downloader.receipts and not self.downloader.is_cancelled:
+                file_path = self.downloader.save_to_file()
+                self.root.after(0, lambda: messagebox.showinfo(
+                    "Успех", 
+                    f"Успешно изтеглени {len(self.downloader.receipts)} бележки!\n\n"
+                    f"Файл: {file_path}"
+                ))
+                self.update_status("✓ Завършено успешно", "green")
+            elif self.downloader.is_cancelled:
+                self.update_status("⚠ Прекъснато", "orange")
+                if self.downloader.receipts:
+                    file_path = self.downloader.save_to_file()
+                    self.root.after(0, lambda: messagebox.showwarning(
+                        "Прекъснато", 
+                        f"Процесът беше прекъснат.\n"
+                        f"Запазени {len(self.downloader.receipts)} бележки.\n\n"
+                        f"Файл: {file_path}"
+                    ))
+            else:
+                self.update_status("⚠ Няма намерени бележки", "orange")
+                self.root.after(0, lambda: messagebox.showwarning(
+                    "Внимание", 
+                    "Не са намерени касови бележки.\n\n"
+                    "Възможни причини:\n"
+                    "- Няма покупки в историята\n"
+                    "- Проблем с влизането в акаунта\n"
+                    "- Структурата на сайта е променена\n"
+                    "- Всички бележки са извън избрания период"
+                ))
+                
+        except Exception as e:
+            self.log_message(f"\n❌ Грешка: {e}")
+            self.update_status("❌ Грешка", "red")
+            self.root.after(0, lambda: messagebox.showerror(
+                "Грешка", 
+                f"Възникна грешка при изтеглянето:\n\n{str(e)}"
+            ))
+        finally:
+            # Активиране на контроли
+            self.root.after(0, self.reset_ui)
+    
+    def continue_after_ready(self):
+        """Продължава след като потребителя е готов"""
+        if self.downloader:
+            self.downloader.ready_to_start = True
+            self.continue_button.config(state=tk.DISABLED)
+            self.update_status("📥 Изтегляне...", "blue")
+            self.log_message("\n✓ Стартиране на изтегляне на бележки...")
+    
+    def stop_download(self):
+        """Прекъсва изтеглянето"""
+        if self.downloader:
+            self.downloader.is_cancelled = True
+            self.log_message("\n⚠ Изпращане на сигнал за прекъсване...")
+            self.stop_button.config(state=tk.DISABLED)
+    
+    def reset_ui(self):
+        """Връща UI в начално състояние"""
+        self.start_button.config(state=tk.NORMAL)
+        self.stop_button.config(state=tk.DISABLED)
+        self.continue_button.config(state=tk.DISABLED)
+        self.start_date_entry.config(state=tk.NORMAL)
+        self.end_date_entry.config(state=tk.NORMAL)
+        self.dir_button.config(state=tk.NORMAL)
+
+
+def main():
+    root = tk.Tk()
+    app = LidlGUI(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
