@@ -1,7 +1,6 @@
 @echo off
 chcp 65001 >nul
-REM Lidl Receipt Downloader - Avtomatichen start
-REM Avtomatichno instalira zavisimosti (ako tryabva) i startira prilozhenieto
+REM Lidl Receipt Downloader - Auto Start
 
 echo.
 echo ============================================
@@ -9,76 +8,76 @@ echo   Lidl Receipt Downloader
 echo ============================================
 echo.
 
-REM Proverka za Python
-echo [1] Proverka za Python...
+REM Check for Python
+echo [1] Checking for Python...
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo   [X] Python ne e nameren!
-    echo       Molya instalirajte Python 3.8+ ot https://www.python.org
+    echo   [X] Python not found!
+    echo       Please install Python 3.8+ from https://www.python.org
     echo.
     pause
     exit /b 1
 )
-echo   [OK] Python nameren
+echo   [OK] Python found
 echo.
 
-REM Proverka i sazdavane na virtualna sreda
+REM Check and create virtual environment
 if not exist "venv" (
-    echo [2] Sazdavane na virtualna sreda...
+    echo [2] Creating virtual environment...
     python -m venv venv
     if errorlevel 1 (
-        echo   [X] Greshka pri sazdavane na virtualna sreda
+        echo   [X] Error creating virtual environment
         pause
         exit /b 1
     )
-    echo   [OK] Virtualna sreda sazdadena
+    echo   [OK] Virtual environment created
     echo.
 )
 
-REM Aktivirane na virtualnata sreda
-echo [3] Aktivirane na virtualna sreda...
+REM Activate virtual environment
+echo [3] Activating virtual environment...
 call venv\Scripts\activate.bat
 
-REM Proverka dali zavisimostite sa instalirani
+REM Check if dependencies are installed
 pip show playwright >nul 2>&1
 if errorlevel 1 (
     echo.
-    echo [4] Instalirane na zavisimosti...
-    echo     Parvo startirane - tova mozhe da otneme nyakolko minuti...
+    echo [4] Installing dependencies...
+    echo     First run - this may take a few minutes...
     echo.
     
     REM Upgrade pip
     python -m pip install --upgrade pip --quiet
     
-    REM Instalacia na zavisimosti
+    REM Install dependencies
     pip install -r requirements.txt --quiet
     if errorlevel 1 (
-        echo   [X] Greshka pri instalirane na zavisimosti
+        echo   [X] Error installing dependencies
         pause
         exit /b 1
     )
-    echo   [OK] Zavisimostite sa instalirani
+    echo   [OK] Dependencies installed
     echo.
     
-    REM Instalacia na Playwright brauzari
-    echo [5] Instalirane na Playwright brauzar...
+    REM Install Playwright browsers
+    echo [5] Installing Playwright browser...
     playwright install chromium
-    echo   [OK] Chromium instaliran
+    echo   [OK] Chromium installed
     echo.
 ) else (
-    echo   [OK] Zavisimostite sa veche instalirani
+    echo   [OK] Dependencies already installed
     echo.
 )
 
-REM Startirane na prilozhenieto
+REM Start the application
 echo ============================================
-echo   Startirane na prilozhenieto...
+echo   Starting application...
 echo ============================================
 echo.
 
 python lidl_scraper_gui.py
 
-REM Деактивиране на venv
+REM Deactivate venv
 call deactivate
 
 echo.
