@@ -1376,6 +1376,147 @@ class LidlGUI:
             # Добавяне на интерактивни контроли
             fig.update_xaxes(rangeslider_visible=True)
             
+            # Изчисляване на топ 10 продукти с най-голяма промяна
+            product_changes = []
+            for product_data in products_with_enough_data:
+                product_name = product_data['name']
+                valid_dates = product_data['dates']
+                prices = product_data['prices']
+                
+                if len(prices) >= 2:
+                    first_price = prices[0]
+                    last_price = prices[-1]
+                    min_price = min(prices)
+                    max_price = max(prices)
+                    
+                    # Намиране на датите на мин. и макс. цени
+                    min_price_idx = prices.index(min_price)
+                    max_price_idx = prices.index(max_price)
+                    min_price_date = valid_dates[min_price_idx].strftime('%d.%m.%Y')
+                    max_price_date = valid_dates[max_price_idx].strftime('%d.%m.%Y')
+                    
+                    # Процентна промяна: ((последна - първа) / първа) * 100
+                    if first_price > 0:
+                        percent_change = ((last_price - first_price) / first_price) * 100
+                        product_changes.append({
+                            'name': product_name,
+                            'change_percent': percent_change,
+                            'min_price': min_price,
+                            'max_price': max_price,
+                            'min_price_date': min_price_date,
+                            'max_price_date': max_price_date,
+                            'first_price': first_price,
+                            'last_price': last_price
+                        })
+            
+            # Сортиране по абсолютна стойност на промяната (най-голяма промяна първа)
+            product_changes.sort(key=lambda x: abs(x['change_percent']), reverse=True)
+            top_10_changes = product_changes[:10]
+            
+            # Генериране на HTML таблица
+            table_html = '''
+            <div class="table-container" style="margin-top: 30px; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h2 style="color: #333; margin-bottom: 20px;">📊 Топ 10 продукти с най-голяма ценова промяна</h2>
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <thead>
+                        <tr style="background-color: #007bff; color: white;">
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">#</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Продукт</th>
+                            <th style="padding: 12px; text-align: center; border: 1px solid #ddd;">Промяна (%)</th>
+                            <th style="padding: 12px; text-align: right; border: 1px solid #ddd;">Мин. цена (€)</th>
+                            <th style="padding: 12px; text-align: right; border: 1px solid #ddd;">Макс. цена (€)</th>
+                        </tr>
+                    </thead>
+                    <tbody>'''
+            
+            for idx, item in enumerate(top_10_changes, 1):
+                # Цвят според промяната
+                if item['change_percent'] > 0:
+                    change_color = '#dc3545'  # червен за увеличение
+                    arrow = '↑'
+                else:
+                    change_color = '#28a745'  # зелен за намаление
+                    arrow = '↓'
+                
+                row_bg = '#f8f9fa' if idx % 2 == 0 else 'white'
+                
+                table_html += f'''
+                        <tr style="background-color: {row_bg};">
+                            <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold;">{idx}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">{item['name']}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold; color: {change_color};">
+                                {arrow} {item['change_percent']:+.2f}%
+                            </td>
+                            <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">
+                                {item['min_price']:.2f}<br>
+                                <small style="color: #666;">({item['min_price_date']})</small>
+                            </td>
+                            <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">
+                                {item['max_price']:.2f}<br>
+                                <small style="color: #666;">({item['max_price_date']})</small>
+                            </td>
+                        </tr>'''
+            
+            table_html += '''
+                    </tbody>
+                </table>
+                <p style="margin-top: 15px; color: #666; font-size: 12px;">
+                    <strong>Забележка:</strong> Промяната е изчислена като процентна разлика между първата и последната дата на среща на продукта в анализа.
+                    <span style="color: #dc3545;">↑ Увеличение</span> | <span style="color: #28a745;">↓ Намаление</span>
+                </p>
+            </div>'''
+            
+            # Генериране на втора таблица - топ 10 понижения
+            price_decreases = [item for item in product_changes if item['change_percent'] < 0]
+            price_decreases.sort(key=lambda x: x['change_percent'])  # Сортиране по най-голямо намаление (най-негативни)
+            top_10_decreases = price_decreases[:10]
+            
+            if top_10_decreases:
+                decrease_table_html = '''
+            <div class="table-container" style="margin-top: 30px; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h2 style="color: #333; margin-bottom: 20px;">📉 Топ 10 продукти с най-голямо понижение на цените</h2>
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <thead>
+                        <tr style="background-color: #28a745; color: white;">
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">#</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Продукт</th>
+                            <th style="padding: 12px; text-align: center; border: 1px solid #ddd;">Понижение (%)</th>
+                            <th style="padding: 12px; text-align: right; border: 1px solid #ddd;">Мин. цена (€)</th>
+                            <th style="padding: 12px; text-align: right; border: 1px solid #ddd;">Макс. цена (€)</th>
+                        </tr>
+                    </thead>
+                    <tbody>'''
+                
+                for idx, item in enumerate(top_10_decreases, 1):
+                    row_bg = '#f8f9fa' if idx % 2 == 0 else 'white'
+                    
+                    decrease_table_html += f'''
+                        <tr style="background-color: {row_bg};">
+                            <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold;">{idx}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">{item['name']}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold; color: #28a745;">
+                                ↓ {item['change_percent']:.2f}%
+                            </td>
+                            <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">
+                                {item['min_price']:.2f}<br>
+                                <small style="color: #666;">({item['min_price_date']})</small>
+                            </td>
+                            <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">
+                                {item['max_price']:.2f}<br>
+                                <small style="color: #666;">({item['max_price_date']})</small>
+                            </td>
+                        </tr>'''
+                
+                decrease_table_html += '''
+                    </tbody>
+                </table>
+                <p style="margin-top: 15px; color: #666; font-size: 12px;">
+                    <strong>Забележка:</strong> Показани са само продуктите с намаление на цената между първата и последната дата на среща.
+                </p>
+            </div>'''
+            else:
+                decrease_table_html = ''
+            
             # Запазване като HTML с добавени контроли за филтриране
             html_content = f'''<!DOCTYPE html>
 <html>
@@ -1489,6 +1630,10 @@ class LidlGUI:
         </div>
         
         <div id="chart"></div>
+        
+        {table_html}
+        
+        {decrease_table_html}
     </div>
     
     <script>
