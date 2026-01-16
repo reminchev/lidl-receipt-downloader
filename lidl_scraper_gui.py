@@ -8,6 +8,7 @@ import os
 import threading
 import time
 import re
+import json
 from datetime import datetime
 from pathlib import Path
 from collections import defaultdict
@@ -17,7 +18,7 @@ from tkcalendar import DateEntry
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from matplotlib.backends.backend_agg import FigureCanvasAgg
+import plotly.graph_objects as go
 
 class LidlReceiptDownloader:
     def __init__(self, output_dir: str, start_date=None, end_date=None, log_callback=None, progress_callback=None):
@@ -417,8 +418,15 @@ class LidlGUI:
         self.download_thread = None
         self.output_dir = str(Path.home() / "Documents")
         self.analysis_file = None
+        self.config_file = "config.json"
+        
+        # Зареждане на конфигурацията
+        self.load_config()
         
         self.setup_ui()
+        
+        # Зареждане на запазения файл за анализ след създаване на UI
+        self.load_saved_analysis_file()
         
     def setup_ui(self):
         """Създава интерфейса"""
@@ -668,6 +676,44 @@ class LidlGUI:
             self.dir_label.config(text=directory)
             self.log_message(f"✓ Избрана директория: {directory}")
     
+    def load_config(self):
+        """Зарежда конфигурацията от файла"""
+        try:
+            if os.path.exists(self.config_file):
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    self.output_dir = config.get('output_dir', str(Path.home() / "Documents"))
+                    self.analysis_file = config.get('analysis_file', None)
+        except Exception as e:
+            print(f"Грешка при зареждане на конфигурация: {e}")
+    
+    def save_config(self):
+        """Запазва конфигурацията във файла"""
+        try:
+            config = {}
+            # Зареждаме съществуващата конфигурация ако има
+            if os.path.exists(self.config_file):
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+            
+            # Обновяваме полетата
+            config['output_dir'] = self.output_dir
+            if self.analysis_file:
+                config['analysis_file'] = self.analysis_file
+            
+            # Запазваме
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"Грешка при запазване на конфигурация: {e}")
+    
+    def load_saved_analysis_file(self):
+        """Зарежда запазения файл за анализ в UI"""
+        if self.analysis_file and os.path.exists(self.analysis_file):
+            file_name = os.path.basename(self.analysis_file)
+            self.analysis_file_label.config(text=file_name, foreground="blue")
+            self.log_message(f"✓ Зареден запазен файл: {file_name}")
+    
     def choose_analysis_file(self):
         """Избира файл за анализ"""
         file_path = filedialog.askopenfilename(
@@ -681,6 +727,8 @@ class LidlGUI:
             file_name = os.path.basename(file_path)
             self.analysis_file_label.config(text=file_name, foreground="blue")
             self.log_message(f"✓ Избран файл за анализ: {file_name}")
+            # Запазваме в конфига
+            self.save_config()
     
     def log_message(self, message):
         """Добавя съобщение в лог текста"""
@@ -1055,7 +1103,8 @@ class LidlGUI:
                                        'МЕЖДИННА', 'ОТСТЪПКИ', 'DISCOUNT', 'БАНКОВА', 'КАРТА',
                                        'ВАУЧЕР', 'VOUCHER', 'СДАЧА', 'CHANGE', 'РЕСТО', 'В БРОЙ',
                                        'ЗА ПЛАЩАНЕ', 'ПЛАЩАНЕ', 'FOR PAYMENT', 'PAYMENT',
-                                       'Ном:', 'Z-отчет', 'Каса:', 'Касиер:', 'АРТИКУЛА', 'Копие']
+                                       'Ном:', 'Z-отчет', 'Каса:', 'Касиер:', 'АРТИКУЛА', 'Копие',
+                                       'ЕЛ. КУПОН', 'ЕЛ.КУПОН', 'КУПОН']
                         
                         if any(keyword in product_name.upper() for keyword in skip_keywords):
                             continue
@@ -1264,57 +1313,297 @@ class LidlGUI:
             
             self.log_message(f"✓ Намерени {len(products_with_enough_data)} продукта с повече от 5 цени")
             
-            # Подготовка на фигурата - увеличаваме височината ако има много продукти
-            fig_height = max(8, min(20, 8 + len(products_with_enough_data) * 0.3))
-            plt.style.use('seaborn-v0_8-darkgrid')
-            fig, ax = plt.subplots(figsize=(16, fig_height))
+            # Генериране на интерактивна HTML графика с Plotly
+            base_name = os.path.splitext(xlsx_file)[0]
+            html_file = f"{base_name}_interactive_chart.html"
             
-            # Рисуване на линии за всички продукти с достатъчно данни
+            # Създаване на интерактивна графика
+            fig = go.Figure()
+            
+            # Добавяне на линии за всеки продукт
             for product_data in products_with_enough_data:
                 product_name = product_data['name']
                 valid_dates = product_data['dates']
                 prices = product_data['prices']
                 
-                # Съкращаване на името на продукта за легендата
-                short_name = product_name[:35] + '...' if len(product_name) > 35 else product_name
-                ax.plot(valid_dates, prices, marker='o', linewidth=2, markersize=5, label=short_name, alpha=0.8)
+                fig.add_trace(go.Scatter(
+                    x=valid_dates,
+                    y=prices,
+                    mode='lines+markers',
+                    name=product_name,
+                    hovertemplate='<b>%{fullData.name}</b><br>' +
+                                  'Дата: %{x|%d.%m.%Y}<br>' +
+                                  'Цена: %{y:.2f} €<br>' +
+                                  '<extra></extra>',
+                    line=dict(width=2),
+                    marker=dict(size=6)
+                ))
             
-            # Форматиране на графиката
-            ax.set_xlabel('Дата', fontsize=12, weight='bold')
-            ax.set_ylabel('Цена (€)', fontsize=12, weight='bold')
-            ax.set_title(f'Промяна на цените на продуктите във времето (продукти с повече от 5 записа: {len(products_with_enough_data)})', 
-                        fontsize=14, weight='bold', pad=20)
+            # Конфигурация на графиката
+            fig.update_layout(
+                title={
+                    'text': f'Промяна на цените на продуктите във времето<br><sub>Продукти с повече от 5 записа: {len(products_with_enough_data)}</sub>',
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'font': {'size': 20}
+                },
+                xaxis=dict(
+                    title=dict(text='Дата', font=dict(size=14)),
+                    tickformat='%d.%m.%Y',
+                    gridcolor='lightgray'
+                ),
+                yaxis=dict(
+                    title=dict(text='Цена (€)', font=dict(size=14)),
+                    gridcolor='lightgray'
+                ),
+                hovermode='closest',
+                template='plotly_white',
+                height=800,
+                showlegend=True,
+                legend=dict(
+                    orientation='v',
+                    yanchor='top',
+                    y=1,
+                    xanchor='left',
+                    x=1.02,
+                    bgcolor='rgba(255, 255, 255, 0.9)',
+                    bordercolor='lightgray',
+                    borderwidth=1
+                ),
+                margin=dict(l=60, r=300, t=100, b=60)
+            )
             
-            # Форматиране на оста X с дати
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%d.%m.%Y'))
-            ax.xaxis.set_major_locator(mdates.AutoDateLocator())
-            plt.xticks(rotation=45, ha='right')
+            # Добавяне на интерактивни контроли
+            fig.update_xaxes(rangeslider_visible=True)
             
-            # Добавяне на легенда - адаптивно разположение
-            if len(products_with_enough_data) <= 15:
-                ax.legend(loc='best', fontsize=8, framealpha=0.9, ncol=1)
-            else:
-                # Ако има много продукти, правим легендата на колони
-                ncols = min(3, (len(products_with_enough_data) + 9) // 10)
-                ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1), fontsize=7, framealpha=0.9, ncol=ncols)
+            # Запазване като HTML с добавени контроли за филтриране
+            html_content = f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Lidl - Интерактивна графика на цените</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }}
+        .container {{
+            max-width: 100%;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .controls {{
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }}
+        .control-group {{
+            margin-bottom: 15px;
+        }}
+        label {{
+            font-weight: bold;
+            margin-right: 10px;
+            display: inline-block;
+            width: 150px;
+        }}
+        input[type="text"] {{
+            padding: 8px;
+            width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }}
+        button {{
+            padding: 8px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }}
+        .btn-primary {{
+            background-color: #007bff;
+            color: white;
+        }}
+        .btn-primary:hover {{
+            background-color: #0056b3;
+        }}
+        .btn-secondary {{
+            background-color: #6c757d;
+            color: white;
+        }}
+        .btn-secondary:hover {{
+            background-color: #545b62;
+        }}
+        .btn-success {{
+            background-color: #28a745;
+            color: white;
+        }}
+        .btn-success:hover {{
+            background-color: #218838;
+        }}
+        .info {{
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #d1ecf1;
+            border-left: 4px solid #0c5460;
+            color: #0c5460;
+        }}
+        #chart {{
+            margin-top: 20px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛒 Lidl - Интерактивна графика на цените</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>🔍 Търси продукт:</label>
+                <input type="text" id="searchInput" placeholder="Въведете име на продукт...">
+                <button class="btn-primary" onclick="filterProducts()">Филтрирай</button>
+            </div>
             
-            # Grid за по-добра четливост
-            ax.grid(True, alpha=0.3)
+            <div class="control-group">
+                <button class="btn-success" onclick="showAll()">Покажи всички</button>
+                <button class="btn-secondary" onclick="hideAll()">Скрий всички</button>
+                <button class="btn-secondary" onclick="resetView()">Възстанови изглед</button>
+            </div>
             
-            # Tight layout за избягване на отрязване
-            plt.tight_layout()
+            <div class="info">
+                <strong>💡 Съвети:</strong>
+                <ul style="margin: 5px 0;">
+                    <li>Кликнете на продукт в легендата за да го покажете/скриете</li>
+                    <li>Използвайте мишката за приближаване (scroll) и местене (drag)</li>
+                    <li>Използвайте филтъра за търсене на конкретни продукти</li>
+                    <li>Двоен клик на легендата изолира един продукт</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div id="chart"></div>
+    </div>
+    
+    <script>
+        var plotData = {fig.to_json()};
+        var layout = plotData.layout;
+        var data = plotData.data;
+        var config = {{
+            responsive: true,
+            displayModeBar: true,
+            modeBarButtonsToAdd: ['drawopenpath', 'eraseshape'],
+            toImageButtonOptions: {{
+                format: 'png',
+                filename: 'lidl_prices_chart',
+                height: 1080,
+                width: 1920,
+                scale: 2
+            }}
+        }};
+        
+        // Запазване на оригиналната видимост
+        var originalVisibility = data.map(trace => trace.visible);
+        
+        Plotly.newPlot('chart', data, layout, config);
+        
+        function filterProducts() {{
+            var searchText = document.getElementById('searchInput').value.toLowerCase();
             
-            # Генериране на име на файла за графиката
-            base_name = os.path.splitext(xlsx_file)[0]
-            chart_file = f"{base_name}_chart.png"
+            if (!searchText) {{
+                showAll();
+                return;
+            }}
             
-            # Запазване на графиката с високо качество
-            plt.savefig(chart_file, dpi=200, bbox_inches='tight')
-            plt.close(fig)
+            var update = {{}};
+            update.visible = data.map(function(trace) {{
+                return trace.name.toLowerCase().includes(searchText);
+            }});
             
-            self.log_message(f"✓ Графиката включва {len(products_with_enough_data)} продукта")
+            Plotly.restyle('chart', update);
+        }}
+        
+        function showAll() {{
+            var update = {{}};
+            update.visible = data.map(() => true);
+            Plotly.restyle('chart', update);
+            document.getElementById('searchInput').value = '';
+        }}
+        
+        function hideAll() {{
+            var update = {{}};
+            update.visible = data.map(() => 'legendonly');
+            Plotly.restyle('chart', update);
+        }}
+        
+        function resetView() {{
+            Plotly.relayout('chart', {{
+                'xaxis.autorange': true,
+                'yaxis.autorange': true
+            }});
+        }}
+        
+        // Добавяне на Enter key за търсене
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {{
+            if (e.key === 'Enter') {{
+                filterProducts();
+            }}
+        }});
+    </script>
+</body>
+</html>'''
             
-            return chart_file
+            with open(html_file, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            
+            self.log_message(f"✓ Интерактивна графика включва {len(products_with_enough_data)} продукта")
+            self.log_message(f"✓ HTML файлът е запазен: {html_file}")
+            
+            # Опционално генериране и на PNG графика (статична версия)
+            try:
+                fig_height = max(8, min(20, 8 + len(products_with_enough_data) * 0.3))
+                plt.style.use('seaborn-v0_8-darkgrid')
+                fig_static, ax = plt.subplots(figsize=(16, fig_height))
+                
+                for product_data in products_with_enough_data:
+                    product_name = product_data['name']
+                    valid_dates = product_data['dates']
+                    prices = product_data['prices']
+                    short_name = product_name[:35] + '...' if len(product_name) > 35 else product_name
+                    ax.plot(valid_dates, prices, marker='o', linewidth=2, markersize=5, label=short_name, alpha=0.8)
+                
+                ax.set_xlabel('Дата', fontsize=12, weight='bold')
+                ax.set_ylabel('Цена (€)', fontsize=12, weight='bold')
+                ax.set_title(f'Промяна на цените на продуктите във времето (продукти с повече от 5 записа: {len(products_with_enough_data)})', 
+                            fontsize=14, weight='bold', pad=20)
+                ax.xaxis.set_major_formatter(mdates.DateFormatter('%d.%m.%Y'))
+                ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+                plt.xticks(rotation=45, ha='right')
+                
+                if len(products_with_enough_data) <= 15:
+                    ax.legend(loc='best', fontsize=8, framealpha=0.9, ncol=1)
+                else:
+                    ncols = min(3, (len(products_with_enough_data) + 9) // 10)
+                    ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1), fontsize=7, framealpha=0.9, ncol=ncols)
+                
+                ax.grid(True, alpha=0.3)
+                plt.tight_layout()
+                
+                chart_file = f"{base_name}_chart.png"
+                plt.savefig(chart_file, dpi=200, bbox_inches='tight')
+                plt.close(fig_static)
+                
+                self.log_message(f"✓ Статична PNG графика също запазена: {chart_file}")
+            except Exception as png_error:
+                self.log_message(f"⚠ Статичната PNG графика не можа да се генерира: {png_error}")
+            
+            return html_file
             
         except Exception as e:
             self.log_message(f"❌ Грешка при генериране на графика: {e}")
