@@ -19,7 +19,6 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
-
 class LidlReceiptDownloader:
     def __init__(self, output_dir: str, start_date=None, end_date=None, log_callback=None, progress_callback=None):
         self.output_dir = output_dir
@@ -1055,6 +1054,7 @@ class LidlGUI:
                         skip_keywords = ['ОБЩА', 'ОБЩО', 'ПЛАТЕНО', 'СУМА', 'TOTAL', 'PAID', 'НАЛИЧНОСТ', 
                                        'МЕЖДИННА', 'ОТСТЪПКИ', 'DISCOUNT', 'БАНКОВА', 'КАРТА',
                                        'ВАУЧЕР', 'VOUCHER', 'СДАЧА', 'CHANGE', 'РЕСТО', 'В БРОЙ',
+                                       'ЗА ПЛАЩАНЕ', 'ПЛАЩАНЕ', 'FOR PAYMENT', 'PAYMENT',
                                        'Ном:', 'Z-отчет', 'Каса:', 'Касиер:', 'АРТИКУЛА', 'Копие']
                         
                         if any(keyword in product_name.upper() for keyword in skip_keywords):
