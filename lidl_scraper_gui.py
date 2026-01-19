@@ -417,7 +417,7 @@ class LidlGUI:
         self.downloader = None
         self.download_thread = None
         self.output_dir = str(Path.home() / "Documents")
-        self.analysis_file = None
+        self.analysis_files = []
         self.config_file = "config.json"
         
         # Зареждане на конфигурацията
@@ -521,23 +521,30 @@ class LidlGUI:
         
         dir_frame.columnconfigure(0, weight=1)
         
-        # Рамка за файл за анализ
-        analysis_frame = ttk.LabelFrame(self.root, text="Файл за анализ на цени", padding="10")
+        # Рамка за файлове за анализ
+        analysis_frame = ttk.LabelFrame(self.root, text="Файлове за анализ на цени", padding="10")
         analysis_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
         
         self.analysis_file_label = ttk.Label(
             analysis_frame, 
-            text="Няма избран файл", 
+            text="Няма избрани файлове", 
             foreground="gray"
         )
         self.analysis_file_label.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=5)
         
         self.analysis_file_button = ttk.Button(
             analysis_frame, 
-            text="📄 Избери файл за анализ", 
-            command=self.choose_analysis_file
+            text="📄 Избери файлове за анализ", 
+            command=self.choose_analysis_files
         )
         self.analysis_file_button.grid(row=0, column=1, padx=5)
+        
+        self.analysis_folder_button = ttk.Button(
+            analysis_frame, 
+            text="📁 Избери папка", 
+            command=self.choose_analysis_folder
+        )
+        self.analysis_folder_button.grid(row=0, column=2, padx=5)
         
         analysis_frame.columnconfigure(0, weight=1)
         
@@ -683,7 +690,7 @@ class LidlGUI:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     config = json.load(f)
                     self.output_dir = config.get('output_dir', str(Path.home() / "Documents"))
-                    self.analysis_file = config.get('analysis_file', None)
+                    self.analysis_files = config.get('analysis_files', [])
         except Exception as e:
             print(f"Грешка при зареждане на конфигурация: {e}")
     
@@ -698,8 +705,8 @@ class LidlGUI:
             
             # Обновяваме полетата
             config['output_dir'] = self.output_dir
-            if self.analysis_file:
-                config['analysis_file'] = self.analysis_file
+            if self.analysis_files:
+                config['analysis_files'] = self.analysis_files
             
             # Запазваме
             with open(self.config_file, 'w', encoding='utf-8') as f:
@@ -708,24 +715,73 @@ class LidlGUI:
             print(f"Грешка при запазване на конфигурация: {e}")
     
     def load_saved_analysis_file(self):
-        """Зарежда запазения файл за анализ в UI"""
-        if self.analysis_file and os.path.exists(self.analysis_file):
-            file_name = os.path.basename(self.analysis_file)
-            self.analysis_file_label.config(text=file_name, foreground="blue")
-            self.log_message(f"✓ Зареден запазен файл: {file_name}")
+        """Зарежда запазените файлове за анализ в UI"""
+        if self.analysis_files:
+            # Проверка дали файловете съществуват
+            existing_files = [f for f in self.analysis_files if os.path.exists(f)]
+            self.analysis_files = existing_files
+            
+            if existing_files:
+                count = len(existing_files)
+                self.analysis_file_label.config(
+                    text=f"Избрани {count} файла", 
+                    foreground="blue"
+                )
+    
+    def choose_analysis_files(self):
+        """Избира множество файлове за анализ"""
+        file_paths = filedialog.askopenfilenames(
+            title="Избери файлове с касови бележки за анализ",
+            initialdir=self.output_dir,
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+        )
+        
+        if file_paths:
+            self.analysis_files = list(file_paths)
+            count = len(self.analysis_files)
+            self.analysis_file_label.config(text=f"Избрани {count} файла", foreground="blue")
+            
+            self.log_message(f"✓ Избрани {count} файла за анализ")
+            # Запазваме в конфига
+            self.save_config()
+    
+    def choose_analysis_folder(self):
+        """Избира папка и зарежда всички txt файлове от нея"""
+        folder_path = filedialog.askdirectory(
+            title="Избери папка с касови бележки",
+            initialdir=self.output_dir
+        )
+        
+        if folder_path:
+            # Намиране на всички txt файлове в папката
+            txt_files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith('.txt')]
+            
+            if txt_files:
+                self.analysis_files = txt_files
+                count = len(txt_files)
+                self.analysis_file_label.config(text=f"Избрани {count} файла от папка", foreground="blue")
+                self.log_message(f"✓ Намерени {count} txt файла в папката")
+                # Запазваме в конфига
+                self.save_config()
+            else:
+                messagebox.showwarning(
+                    "Внимание",
+                    "Няма намерени txt файлове в избраната папка!"
+                )
+                self.log_message("⚠ Няма намерени txt файлове в папката")
     
     def choose_analysis_file(self):
-        """Избира файл за анализ"""
+        """Избира файл за анализ (запазва се за обратна съвместимост)"""
         file_path = filedialog.askopenfilename(
             title="Избери файл с касови бележки за анализ",
             initialdir=self.output_dir,
             filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
         )
         if file_path:
-            self.analysis_file = file_path
+            self.analysis_files = [file_path]
             # Показваме само името на файла, не целия път (за да се побере в интерфейса)
             file_name = os.path.basename(file_path)
-            self.analysis_file_label.config(text=file_name, foreground="blue")
+            self.analysis_file_label.config(text=f"Избран 1 файл", foreground="blue")
             self.log_message(f"✓ Избран файл за анализ: {file_name}")
             # Запазваме в конфига
             self.save_config()
@@ -912,40 +968,45 @@ class LidlGUI:
     
     def analyze_receipts(self):
         """Анализира касовите бележки и създава XLSX файл с история на цените"""
-        # Проверка дали е избран файл
-        if not self.analysis_file:
-            # Ако няма избран файл, отваряме диалог
-            file_path = filedialog.askopenfilename(
-                title="Избери файл с касови бележки за анализ",
+        # Проверка дали са избрани файлове
+        if not self.analysis_files:
+            # Ако няма избрани файлове, отваряме диалог
+            file_paths = filedialog.askopenfilenames(
+                title="Избери файлове с касови бележки за анализ",
                 initialdir=self.output_dir,
                 filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
             )
             
-            if not file_path:
+            if not file_paths:
                 return
             
-            self.analysis_file = file_path
-            file_name = os.path.basename(file_path)
-            self.analysis_file_label.config(text=file_name, foreground="blue")
-        else:
-            file_path = self.analysis_file
+            self.analysis_files = list(file_paths)
+            count = len(self.analysis_files)
+            self.analysis_file_label.config(text=f"Избрани {count} файла", foreground="blue")
         
-        # Проверка дали файлът съществува
-        if not os.path.exists(file_path):
+        # Проверка дали файловете съществуват
+        existing_files = [f for f in self.analysis_files if os.path.exists(f)]
+        if not existing_files:
             messagebox.showerror(
                 "Грешка", 
-                f"Файлът не съществува:\n{file_path}\n\nМоля изберете друг файл."
+                f"Избраните файлове не съществуват!\n\nМоля изберете други файлове."
             )
-            self.analysis_file = None
-            self.analysis_file_label.config(text="Няма избран файл", foreground="gray")
+            self.analysis_files = []
+            self.analysis_file_label.config(text="Няма избрани файлове", foreground="gray")
             return
         
-        self.log_message(f"\n📊 Стартиране на анализ на файл: {os.path.basename(file_path)}")
+        # Актуализираме списъка със съществуващи файлове
+        self.analysis_files = existing_files
+        
+        self.log_message(f"\n📊 Стартиране на анализ на {len(self.analysis_files)} файла:")
+        for file_path in self.analysis_files:
+            self.log_message(f"   • {os.path.basename(file_path)}")
+        
         self.update_status("📊 Анализ...", "blue")
         
         try:
-            # Парсване на файла
-            products_data = self.parse_receipts_file(file_path)
+            # Парсване на всички файлове
+            products_data = self.parse_receipts_files(self.analysis_files)
             
             if not products_data:
                 messagebox.showwarning("Внимание", "Не са намерени артикули за анализ!")
@@ -970,8 +1031,9 @@ class LidlGUI:
             self.log_message(f"✓ Намерени {len(filtered_products)} артикула с повече от 1 покупка")
             self.log_message(f"  (Общо {len(products_data)} уникални артикула)")
             
-            # Генериране на XLSX файл
-            output_file = self.generate_xlsx(filtered_products, file_path)
+            # Генериране на XLSX файл - използваме първия файл като база за името
+            base_file = self.analysis_files[0]
+            output_file = self.generate_xlsx(filtered_products, base_file)
             
             self.log_message(f"\n✓ XLSX файлът е създаден успешно!")
             self.log_message(f"  Файл: {output_file}")
@@ -1000,6 +1062,45 @@ class LidlGUI:
             self.update_status("❌ Грешка при анализ", "red")
             messagebox.showerror("Грешка", f"Грешка при анализ:\n\n{str(e)}")
     
+    def parse_receipts_files(self, file_paths):
+        """Парсва множество файлове с бележки и извлича продукти с дати и цени"""
+        products_data = defaultdict(dict)  # {product_name: {date: price}}
+        
+        total_receipts = 0
+        
+        for file_idx, file_path in enumerate(file_paths, 1):
+            self.log_message(f"\n📄 Файл {file_idx}/{len(file_paths)}: {os.path.basename(file_path)}")
+            
+            try:
+                file_products = self.parse_receipts_file(file_path)
+                
+                # Обединяване на данните от този файл с общите данни
+                for product_name, dates_prices in file_products.items():
+                    for date, price in dates_prices.items():
+                        # Ако продуктът вече има цена за тази дата, използваме средната стойност
+                        if date in products_data[product_name]:
+                            # Средна стойност между двете цени
+                            existing_price = products_data[product_name][date]
+                            products_data[product_name][date] = (existing_price + price) / 2
+                        else:
+                            products_data[product_name][date] = price
+                
+                # Преброяване на бележките в този файл
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    receipts = content.split('БЕЛЕЖКА #')
+                    file_receipt_count = len(receipts) - 1
+                    total_receipts += file_receipt_count
+                
+            except Exception as e:
+                self.log_message(f"  ⚠ Грешка при четене на файл: {e}")
+                continue
+        
+        self.log_message(f"\n✓ Общо обработени: {total_receipts} бележки от {len(file_paths)} файла")
+        self.log_message(f"✓ Намерени: {len(products_data)} уникални артикула")
+        
+        return products_data
+    
     def parse_receipts_file(self, file_path):
         """Парсва файла с бележки и извлича продукти с дати и цени"""
         products_data = defaultdict(dict)  # {product_name: {date: price}}
@@ -1011,7 +1112,7 @@ class LidlGUI:
             # Разделяне на бележки
             receipts = content.split('БЕЛЕЖКА #')
             
-            self.log_message(f"✓ Намерени {len(receipts)-1} бележки за парсинг...")
+            self.log_message(f"  ✓ Намерени {len(receipts)-1} бележки за парсинг...")
             
             for receipt_idx, receipt in enumerate(receipts[1:], 1):  # Прескачаме първия празен елемент
                 # Извличане на дата - търсим различни формати
@@ -1149,9 +1250,9 @@ class LidlGUI:
                         products_found += 1
                 
                 if products_found > 0:
-                    self.log_message(f"  ✓ Бележка #{receipt_idx} ({receipt_date_str}): {products_found} артикула")
+                    self.log_message(f"    ✓ Бележка #{receipt_idx} ({receipt_date_str}): {products_found} артикула")
             
-            self.log_message(f"\n✓ Общо обработени: {len(products_data)} уникални артикула")
+            self.log_message(f"  ✓ От този файл: {len(products_data)} уникални артикула")
             return products_data
             
         except Exception as e:
