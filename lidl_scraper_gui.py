@@ -449,7 +449,7 @@ class LidlGUI:
         subtitle_label.grid(row=1, column=0, pady=2)
         
         # Рамка за период
-        period_frame = ttk.LabelFrame(self.root, text="Период на бележките (опционално)", padding="10")
+        period_frame = ttk.LabelFrame(self.root, text="СТЪПКА 1: Период на бележките (опционално)", padding="10")
         period_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
         
         ttk.Label(period_frame, text="От дата:").grid(row=0, column=0, sticky=tk.W, pady=5, padx=5)
@@ -506,7 +506,7 @@ class LidlGUI:
         period_frame.columnconfigure(3, weight=1)
         
         # Рамка за директория
-        dir_frame = ttk.LabelFrame(self.root, text="Директория за съхранение", padding="10")
+        dir_frame = ttk.LabelFrame(self.root, text="СТЪПКА 2: Директория за съхранение", padding="10")
         dir_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
         
         self.dir_label = ttk.Label(dir_frame, text=self.output_dir, foreground="blue")
@@ -521,9 +521,58 @@ class LidlGUI:
         
         dir_frame.columnconfigure(0, weight=1)
         
+        # Рамка за контроли на изтегляне
+        download_control_frame = ttk.LabelFrame(self.root, text="СТЪПКА 3: Изтегляне на бележки", padding="10")
+        download_control_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+        
+        # Описание
+        desc_label = ttk.Label(
+            download_control_frame,
+            text="Натиснете 'Старт', влезте в акаунта си в отворения браузър, после натиснете 'Започни изтегляне'",
+            font=("Arial", 9),
+            foreground="darkblue"
+        )
+        desc_label.grid(row=0, column=0, columnspan=5, pady=(0, 10), sticky=tk.W)
+        
+        self.start_button = ttk.Button(
+            download_control_frame, 
+            text="① Старт", 
+            command=self.start_download,
+            style="Accent.TButton",
+            width=20
+        )
+        self.start_button.grid(row=1, column=0, padx=5, pady=5)
+        
+        arrow_label1 = ttk.Label(download_control_frame, text="➜", font=("Arial", 14))
+        arrow_label1.grid(row=1, column=1, padx=5)
+        
+        self.continue_button = ttk.Button(
+            download_control_frame, 
+            text="② Започни изтегляне", 
+            command=self.continue_after_ready,
+            state=tk.DISABLED,
+            style="Accent.TButton",
+            width=20
+        )
+        self.continue_button.grid(row=1, column=2, padx=5, pady=5)
+        
+        arrow_label2 = ttk.Label(download_control_frame, text="➜", font=("Arial", 14))
+        arrow_label2.grid(row=1, column=3, padx=5)
+        
+        self.stop_button = ttk.Button(
+            download_control_frame, 
+            text="⏸ Прекъсване", 
+            command=self.stop_download,
+            state=tk.DISABLED,
+            width=20
+        )
+        self.stop_button.grid(row=1, column=4, padx=5, pady=5)
+        
+        download_control_frame.columnconfigure(5, weight=1)
+        
         # Рамка за файлове за анализ
-        analysis_frame = ttk.LabelFrame(self.root, text="Файлове за анализ на цени", padding="10")
-        analysis_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+        analysis_frame = ttk.LabelFrame(self.root, text="СТЪПКА 4: Анализ на цени (опционално)", padding="10")
+        analysis_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
         
         self.analysis_file_label = ttk.Label(
             analysis_frame, 
@@ -546,67 +595,46 @@ class LidlGUI:
         )
         self.analysis_folder_button.grid(row=0, column=2, padx=5)
         
-        analysis_frame.columnconfigure(0, weight=1)
-        
-        # Рамка за контроли
-        control_frame = ttk.Frame(self.root, padding="10")
-        control_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
-        
-        self.start_button = ttk.Button(
-            control_frame, 
-            text="▶ Старт", 
-            command=self.start_download,
-            style="Accent.TButton"
-        )
-        self.start_button.grid(row=0, column=0, padx=5)
-        
-        self.stop_button = ttk.Button(
-            control_frame, 
-            text="⏸ Прекъсване", 
-            command=self.stop_download,
-            state=tk.DISABLED
-        )
-        self.stop_button.grid(row=0, column=1, padx=5)
-        
-        self.continue_button = ttk.Button(
-            control_frame, 
-            text="✓ Започни изтегляне", 
-            command=self.continue_after_ready,
-            state=tk.DISABLED,
-            style="Accent.TButton"
-        )
-        self.continue_button.grid(row=0, column=2, padx=5)
-        
         # Бутон за анализ
         self.analyze_button = ttk.Button(
-            control_frame, 
+            analysis_frame, 
             text="📊 Анализ → XLSX", 
             command=self.analyze_receipts,
             style="Accent.TButton"
         )
-        self.analyze_button.grid(row=0, column=3, padx=5)
+        self.analyze_button.grid(row=1, column=0, columnspan=3, pady=10)
+        
+        analysis_frame.columnconfigure(0, weight=1)
+        
+        # Рамка за статус
+        status_frame = ttk.Frame(self.root, padding="10")
+        status_frame.grid(row=5, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+        
+        ttk.Label(status_frame, text="Статус:", font=("Arial", 10, "bold")).grid(row=0, column=0, padx=5)
         
         # Статус лейбъл
         self.status_label = ttk.Label(
-            control_frame, 
+            status_frame, 
             text="Готов за стартиране",
             foreground="green",
             font=("Arial", 10, "bold")
         )
-        self.status_label.grid(row=0, column=4, padx=15)
+        self.status_label.grid(row=0, column=1, padx=5)
         
         # Таймер лейбъл
         self.timer_label = ttk.Label(
-            control_frame, 
+            status_frame, 
             text="⏱ Време: 0с",
             foreground="blue",
             font=("Arial", 10)
         )
-        self.timer_label.grid(row=0, column=5, padx=5)
+        self.timer_label.grid(row=0, column=2, padx=15)
+        
+        status_frame.columnconfigure(3, weight=1)
         
         # Рамка за прогрес барове
-        progress_frame = ttk.LabelFrame(self.root, text="Прогрес", padding="10")
-        progress_frame.grid(row=5, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+        progress_frame = ttk.LabelFrame(self.root, text="Прогрес на изтегляне", padding="10")
+        progress_frame.grid(row=6, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
         
         # Първи прогрес бар - страници
         ttk.Label(progress_frame, text="Прогрес по страници:").grid(row=0, column=0, sticky=tk.W, pady=2)
@@ -637,8 +665,8 @@ class LidlGUI:
         progress_frame.columnconfigure(1, weight=1)
         
         # Рамка за логове
-        log_frame = ttk.LabelFrame(self.root, text="Прогрес и логове", padding="10")
-        log_frame.grid(row=6, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=10, pady=5)
+        log_frame = ttk.LabelFrame(self.root, text="Детайлни логове", padding="10")
+        log_frame.grid(row=7, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=10, pady=5)
         
         self.log_text = scrolledtext.ScrolledText(
             log_frame, 
@@ -653,7 +681,7 @@ class LidlGUI:
         
         # Конфигурация на grid weights
         self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(6, weight=1)
+        self.root.rowconfigure(7, weight=1)
         
         # Стилове
         style = ttk.Style()
