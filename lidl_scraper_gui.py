@@ -407,6 +407,92 @@ class LidlReceiptDownloader:
         return full_path
 
 
+# Списък с плодове и зеленчуци (ключови думи, срещани в касови бележки от LIDL.bg)
+FRUITS_VEGETABLES_KEYWORDS = [
+    # ── Основни плодове ───────────────────────────────────────────────────────
+    'ЯБЪЛК', 'БАНАН', 'ПОРТОКАЛ', 'МАНДАРИН', 'ЛИМОН', 'ГРЕЙПФРУТ', 'ГРОЗДЕ',
+    'ЯГОД', 'МАЛИН', 'КАПИН', 'КАЙСИИ', 'КАЙСИЯ', 'ПРАСКОВИ', 'ПРАСКОВА',
+    'СЛИВ', 'ЧЕРЕШ', 'ВИШНИ', 'ВИШНА', 'ПЪПЕШ', 'ДИНЯ', 'КРУШ', 'НЕКТАРИН',
+    'СМОКИН', 'НАР', 'БОРОВИНК', 'АРОНИЯ', 'КАСИС', 'КЛЕМЕНТИН', 'САТСУМА',
+    'МАНДАРИНК', 'ПОРТОКАЛОВ', 'ЛИМОНОВ',
+    # ── Екзотични плодове ─────────────────────────────────────────────────────
+    'АВОКАДО', 'МАНГО', 'АНАНАС', 'ПАПАЯ', 'МАРАКУЯ', 'КИВИ', 'ЛИЧИ', 'РАМБУТАН',
+    'ЛОНГАН', 'ДУРИАН', 'ДЖАКФРУТ', 'КАРАМБОЛА', 'ЗВЕЗДНА', 'ПИТАЯ', 'ДРАКОН',
+    'ГУАВА', 'ТАМАРИНД', 'ТАМАРИНД', 'ПОМЕЛО', 'ЮЗУ', 'КУМКВАТ', 'ФЕЙХОА',
+    'ЧЕРИМОЯ', 'САПОД', 'МАМЕЙ', 'АCЕРОЛА', 'АЦЕРОЛА', 'НОНИ', 'ДЕРЕН',
+    'ХУРМА', 'ФИНИК', 'СМОКИНЯ', 'ИНЖИР', 'ТАМАРИЛЬ', 'ФИЗАЛИС', 'ГОДЖИ',
+    'АРОНИВ', 'ОБЛЕПИХ', 'ШИПК', 'ДЮЛЯ', 'МУШМУЛ', 'ДЖАНК', 'ДЖАНКА',
+    'ТАМАРИНД', 'КАНИСТЕЛ', 'ДЖАБУТИКАБА', 'НАНГКА', 'САЛАК', 'СНЕЙК ФРУТ',
+    'ТАРАМАРИЛЬ', 'БАБАКО', 'БИРИМБИ', 'КАРИССА', 'ЛУКУМА', 'НАШПИР',
+    'ЦИТРОН', 'БЕРГАМОТ', 'КАФИР', 'ПОМПЕЛМ', 'БУДДХАС ХЕНД', 'ХЕНД',
+    'ПЕПИНО', 'ТАРНАМБУТА', 'КУПУАСУ', 'АСАИ', 'АСАЙ', 'МОНСТЕРА',
+    # ── Горски плодове и ягодоплодни ──────────────────────────────────────────
+    'ЯГОДОПЛОДЕН', 'КАСИС', 'ЦАРИГРАДСКО', 'ЦАРИГРАДСК', 'АГРУС', 'АРОНИВ',
+    'АРБУТУС', 'МИРТ', 'МИРТА', 'МОМИНА СЪЛЗА', 'РОСИЦА', 'КЛЮКВА', 'КЛЮКВ',
+    'БРУСНИЦ', 'БРУСНИКА', 'МОРОШК', 'МОРОШКА', 'ГОЛДЕН БЕРИ', 'ГОЛДЪНБЕРИ',
+    # ── Основни зеленчуци ─────────────────────────────────────────────────────
+    'ДОМАТ', 'КРАСТАВИЦ', 'ЧУШК', 'КАРТОФ', 'МОРКОВ', 'ЛУКА', 'ЛУК', 'ЧЕСЪН',
+    'ЗЕЛЕ', 'БРОКОЛ', 'КАРФИОЛ', 'СПАНАК', 'ТИКВА', 'ПАТЛАДЖАН', 'ТИКВИЧК',
+    'МАРУЛЯ', 'РЕПИЧК', 'ЦЕЛИНА', 'МАГДАНОЗ', 'ПРАЗ', 'АСПЕРЖИ', 'АРТИШОК',
+    'ЦВЕКЛО', 'РЯПА', 'КОПЪР', 'РУКОЛА', 'АЙСБЕРГ', 'ЕНДИВИЯ', 'ЦИКОРИЯ',
+    'ЦАРЕВИЦ', 'ГРАХ', 'БОБ', 'ЛЕЩА', 'ПИПЕР', 'ЧИЛИ', 'ХАБАНЕРО', 'ЯЛАДЖА',
+    'ТИКВЕН', 'ЗЕЛЕН', 'ЗЕЛЕНЧУК', 'САЛАТ', 'МАШ', 'НАХУТ', 'СОЯ', 'ЕДАМАМЕ',
+    'СЛАДКА ЦАРЕВИЦ', 'БРОКОЛИ', 'КЕЙЛ', 'МАНГОЛД', 'МАНГОЛ',
+    # ── Екзотични и специални зеленчуци ───────────────────────────────────────
+    'ОКРА', 'БАМЯ', 'ГОРЧИЦА', 'ГОРЧИЧН', 'ПАКЧОЙ', 'ПАК ЧОЙ', 'БОКТАЙ',
+    'КИТАЙСКО ЗЕЛЕ', 'НАПА', 'МИЗУН', 'ТАТСОЙ', 'КОМАЦУН', 'ШИСО',
+    'ДАЙКОН', 'ЯПОНСК', 'РЕДИС', 'ХИКАМА', 'ТАРО', 'ЕДОК', 'ЯМ', 'БАТАТ',
+    'СЛАДЪК КАРТОФ', 'МАНИОКА', 'КАСАВ', 'ЯМС', 'ТОПИНАМБУР', 'ЕРУСАЛИМСК',
+    'ПАЩЪРНАК', 'СКОРЦОНЕРА', 'ЗЕЛЕНА РЕПИЧК', 'ВАСАБИ', 'КОЛРАБИ',
+    'ФЕНЕЛ', 'КОПРИНЕН', 'ОРИЗОВА КАША', 'БАМБУКОВ', 'БАМБУК ИЗДЪНИ',
+    'ЛОТОС', 'ЛОТУСОВ', 'ВОДНА КЕСТЕН', 'СИНАПТИЧН', 'СИНАП',
+    'КАРАМБОЛ', 'ВИТЛОФ', 'ЦИКОРИЙ', 'РАКОВИН', 'МОРКОВИ',
+    'ЗЕМНА ЯБЪЛК', 'ЧЕРНА РЕПА', 'АЛТАЙСК', 'АЛФАЛФ', 'ЛЮЦЕРН',
+    'КРЕСОН', 'МИКРО', 'МИКРОГРИЙН', 'НИКНИК', 'КЪЛНОВ', 'КЪЛНОВЕ',
+    'БЕЙБИ СПАНАК', 'БЕЙБИ РУКОЛ', 'БЕЙБИ МОРКОВ', 'ЧЕРРИ ДОМАТ',
+    'ЧЕРИ ДОМАТ', 'КОКТЕЙЛЕН ДОМАТ', 'СЛИВОВ ДОМАТ',
+    # ── Гъби (вземани като зеленчуци) ────────────────────────────────────────
+    'ГЪБИ', 'ГЪБА', 'ШАМПИНИОН', 'СТРИДОВА', 'ШИЙТАКЕ', 'ПОРТОБЕЛО',
+    'МАНАТАРК', 'МАНАТАРКА', 'ПАЧИ', 'ЛИСИЧК', 'ЛИСИЧКА', 'ТРЮФЕЛ',
+    'МАЦУТАКЕ', 'ЕРИНГИЙ', 'ЕНОКИ', 'КРАЛСК', 'КРАЛСКА ГЪБА',
+    # ── Подправки и ароматни растения ─────────────────────────────────────────
+    'ДЖИНДЖИФИЛ', 'КУРКУМА', 'ТУРМЕРИК', 'БОСИЛЕК', 'МЕНТА', 'РИГАН',
+    'МАЩЕРКА', 'РОЗМАРИН', 'ЛАВАНДУЛА', 'ЧУБРИЦА', 'ЕСТРАГОН', 'ХРЯН',
+    'ДЖОДЖЕН', 'КОРИАНДЪР', 'КОРИАНДЪ', 'ЛИМОНОВА ТРЕВА', 'ПАНДАН',
+    'ГАЛАНГАЛ', 'ЗЕЛЕН ЛИМОН', 'КИНЗА', 'КИНЗОВ', 'МАТОЧИН',
+    # ── Цитрусови ─────────────────────────────────────────────────────────────
+    'ЛАЙМ', 'ЛАЙМОВ', 'МАНДАРИНК', 'ЦИТРУСОВ', 'ЦИТРУС',
+    # ── Общи термини ─────────────────────────────────────────────────────────
+    'ПЛОД', 'ПЛОДОВ', 'ПЛОДОВ СОК', 'ПРЕСНИ', 'СВЕЖИ', 'БИО ПЛОД',
+    'БИО ЗЕЛЕНЧУК', 'ОРГАНИЧ', 'ФЕРМЕРСК', 'СЕЗОНН',
+]
+
+# Продукти, чиито имена съдържат ключова дума за плод/зеленчук, но НЕ са такива
+FV_EXCLUDE_KEYWORDS = [
+    # Месни продукти с "ЛУК" / "НАР" / "ЯМ" / "ЗЕЛЕН" в името
+    'ЛУКАНК',          # луканка (наденица)
+    'НАРЯЗАН',         # нарязан продукт (ЛУК, НАР → НАРЯЗАН...)
+    'ЯМБОЛСК',         # Ямболска наденица
+    'ЯМБОЛЕН',
+    'ЯХНИЯ',           # яхния съдържа зеленчуци, но е готово ястие
+    'ЗЕЛЕНЧУКОВА ЯХН', # готово ястие
+    'БОБОТИ',
+    'МАНГОЛД',         # вече в списъка като зеленчук — ОК, но проверяваме
+    'СОКОЛ',           # марка (съдържа "ОК" → няма проблем, но за безопасност)
+    'БАЛКАНКА',        # марка
+    'БОБИНА',          # технически продукт
+    'СЛОЕНА',          # слоена баница (СЛИВ...)
+    'СЛИВЕНСК',        # Сливенска наденица
+    'ЗЕЛЕНОСАН',
+    'ГРАХАМ',          # Graham крекери (ГРАХ)
+]
+
+# Летен сезон - месеци с по-ниски цени за свежи плодове/зеленчуци
+SUMMER_MONTHS = {6, 7, 8, 9}  # Юни, Юли, Август, Септември
+SUMMER_MONTHS_NAMES = 'Юни, Юли, Август, Септември'
+OFF_SEASON_MONTHS_NAMES = 'Януари – Май, Октомври – Декември'
+
+
 class LidlGUI:
     def __init__(self, root):
         self.root = root
@@ -419,6 +505,8 @@ class LidlGUI:
         self.output_dir = str(Path.home() / "Documents")
         self.analysis_files = []
         self.config_file = "config.json"
+        # Единица за всеки продукт: '€/кг', '€/100г' или '€' (цена за пакет)
+        self.products_units = {}
         
         # Зареждане на конфигурацията
         self.load_config()
@@ -595,15 +683,15 @@ class LidlGUI:
         )
         self.analysis_folder_button.grid(row=0, column=2, padx=5)
         
-        # Бутон за анализ
+        # Бутон за анализ (включва и сезонен анализ на плодове/зеленчуци)
         self.analyze_button = ttk.Button(
-            analysis_frame, 
-            text="📊 Анализ → XLSX", 
+            analysis_frame,
+            text="📊 Анализ → XLSX + 🌿 Сезонен анализ",
             command=self.analyze_receipts,
             style="Accent.TButton"
         )
         self.analyze_button.grid(row=1, column=0, columnspan=3, pady=10)
-        
+
         analysis_frame.columnconfigure(0, weight=1)
         
         # Рамка за статус
@@ -1065,24 +1153,43 @@ class LidlGUI:
             
             self.log_message(f"\n✓ XLSX файлът е създаден успешно!")
             self.log_message(f"  Файл: {output_file}")
-            
+
             # Генериране на графика
             self.log_message(f"\n📊 Генериране на графика...")
             chart_file = self.generate_chart(output_file)
-            
+
             if chart_file:
                 self.log_message(f"✓ Графиката е създадена успешно!")
                 self.log_message(f"  Файл: {chart_file}")
-            
+
+            # Сезонен анализ на плодове и зеленчуци (вграден)
+            fv_data = {
+                name: dates_prices
+                for name, dates_prices in products_data.items()
+                if self.is_fruit_or_vegetable(name)
+            }
+            seasonal_html = None
+            if fv_data:
+                self.log_message(f"\n🌿 Генериране на сезонен анализ за {len(fv_data)} плода/зеленчука...")
+                base_name = os.path.splitext(base_file)[0]
+                seasonal_html = f"{base_name}_seasonal_analysis.html"
+                self.generate_seasonal_html(fv_data, seasonal_html)
+                self.log_message(f"✓ Сезонен анализ запазен: {seasonal_html}")
+            else:
+                self.log_message("⚠ Не са намерени плодове/зеленчуци за сезонен анализ")
+
             self.update_status("✓ Анализ завършен", "green")
-            
+
+            seasonal_line = f"\nСезонен анализ: {os.path.basename(seasonal_html)}" if seasonal_html else ""
             messagebox.showinfo(
-                "Успех", 
+                "Успех",
                 f"Анализът завърши успешно!\n\n"
                 f"Артикули с повече от 1 покупка: {len(filtered_products)}\n"
-                f"Общо уникални артикули: {len(products_data)}\n\n"
+                f"Общо уникални артикули: {len(products_data)}\n"
+                f"Плодове/зеленчуци за сезонен анализ: {len(fv_data)}\n\n"
                 f"XLSX: {os.path.basename(output_file)}\n"
                 f"Графика: {os.path.basename(chart_file) if chart_file else 'N/A'}"
+                f"{seasonal_line}"
             )
             
         except Exception as e:
@@ -1257,18 +1364,29 @@ class LidlGUI:
                             unit_match = re.search(unit_price_pattern, prev_line)
                             
                             if unit_match:
-                                # Използваме единичната цена вместо крайната цена
+                                # Единичната цена вече е за кг (Lidl претегля в кг)
                                 unit_price_str = unit_match.group(2).replace(',', '.')
                                 try:
                                     unit_price = float(unit_price_str)
-                                    # Конвертиране на цена ако е нужно
-                                    final_price = unit_price / conversion_rate
+                                    final_price = unit_price / conversion_rate  # €/кг
+                                    self.products_units[product_name] = '€/кг'
                                 except ValueError:
-                                    # Ако не може да се парсне, използваме оригиналната цена
                                     final_price = price / conversion_rate
+                                    self.products_units.setdefault(product_name, '€')
                             else:
-                                # Ако не намерим шаблона, използваме оригиналната цена
-                                final_price = price / conversion_rate
+                                raw_price = price / conversion_rate
+                                weight_kg, unit_label = self.extract_weight_from_name(product_name)
+                                if weight_kg and weight_kg > 0:
+                                    if unit_label == '€/100г':
+                                        # цена / (тегло_в_грамове / 100) = цена за 100г
+                                        final_price = raw_price / (weight_kg * 10)
+                                    else:
+                                        # цена / тегло_в_кг = цена за кг
+                                        final_price = raw_price / weight_kg
+                                    self.products_units[product_name] = unit_label
+                                else:
+                                    final_price = raw_price
+                                    self.products_units.setdefault(product_name, '€')
                         else:
                             # Конвертиране на цена ако е нужно
                             final_price = price / conversion_rate
@@ -1319,9 +1437,14 @@ class LidlGUI:
         ws['A1'].fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
         ws['A1'].font = Font(bold=True, size=12, color="FFFFFF")
         ws['A1'].alignment = Alignment(horizontal='left', vertical='center')
-        
-        # Добавяне на дати като колони
-        for idx, date in enumerate(sorted_dates, start=2):
+
+        ws['B1'] = "Единица"
+        ws['B1'].font = Font(bold=True, size=12, color="FFFFFF")
+        ws['B1'].fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        ws['B1'].alignment = Alignment(horizontal='center', vertical='center')
+
+        # Добавяне на дати като колони (от колона 3 нататък)
+        for idx, date in enumerate(sorted_dates, start=3):
             col_letter = get_column_letter(idx)
             # Форматиране на датата за по-добра четливост (DD.MM.YYYY)
             date_obj = datetime.strptime(date, '%Y-%m-%d')
@@ -1336,10 +1459,14 @@ class LidlGUI:
         for product_name in sorted(products_data.keys()):
             ws[f'A{row_idx}'] = product_name
             ws[f'A{row_idx}'].alignment = Alignment(horizontal='left', vertical='center')
-            
+
+            unit_label = self.products_units.get(product_name, '€')
+            ws[f'B{row_idx}'] = unit_label
+            ws[f'B{row_idx}'].alignment = Alignment(horizontal='center', vertical='center')
+
             dates_prices = products_data[product_name]
-            
-            for col_idx, date in enumerate(sorted_dates, start=2):
+
+            for col_idx, date in enumerate(sorted_dates, start=3):
                 col_letter = get_column_letter(col_idx)
                 
                 if date in dates_prices:
@@ -1353,7 +1480,8 @@ class LidlGUI:
         
         # Настройка на ширина на колоните
         ws.column_dimensions['A'].width = 50
-        for col_idx in range(2, len(sorted_dates) + 2):
+        ws.column_dimensions['B'].width = 12
+        for col_idx in range(3, len(sorted_dates) + 3):
             col_letter = get_column_letter(col_idx)
             ws.column_dimensions[col_letter].width = 15
         
@@ -1365,12 +1493,12 @@ class LidlGUI:
             bottom=Side(style='thin')
         )
         
-        for row in ws.iter_rows(min_row=1, max_row=row_idx-1, min_col=1, max_col=len(sorted_dates)+1):
+        for row in ws.iter_rows(min_row=1, max_row=row_idx-1, min_col=1, max_col=len(sorted_dates)+2):
             for cell in row:
                 cell.border = thin_border
         
-        # Замръзване на първия ред и първата колона
-        ws.freeze_panes = 'B2'
+        # Замръзване на първия ред и първите две колони (Артикул + Единица)
+        ws.freeze_panes = 'C2'
         
         # Генериране на име на файла
         base_name = os.path.splitext(source_file)[0]
@@ -1393,9 +1521,9 @@ class LidlGUI:
             wb = openpyxl.load_workbook(xlsx_file)
             ws = wb.active
             
-            # Извличане на дати от хедъра (ред 1, от колона 2 нататък)
+            # Извличане на дати от хедъра (ред 1, от колона 3 нататък — колона 2 е "Единица")
             dates = []
-            for col in range(2, ws.max_column + 1):
+            for col in range(3, ws.max_column + 1):
                 date_str = ws.cell(row=1, column=col).value
                 if date_str:
                     try:
@@ -1415,13 +1543,15 @@ class LidlGUI:
                 product_name = ws.cell(row=row_idx, column=1).value
                 if not product_name:
                     continue
+
+                unit_label = ws.cell(row=row_idx, column=2).value or '€'
                 
                 # Броене на попълнени цени за този продукт
                 price_count = 0
                 prices = []
                 valid_dates = []
                 
-                for col_idx, date in enumerate(dates, start=2):
+                for col_idx, date in enumerate(dates, start=3):
                     price_value = ws.cell(row=row_idx, column=col_idx).value
                     if price_value is not None:
                         price_count += 1
@@ -1432,6 +1562,7 @@ class LidlGUI:
                 if price_count > 5:
                     products_with_enough_data.append({
                         'name': product_name,
+                        'unit': unit_label,
                         'dates': valid_dates,
                         'prices': prices
                     })
@@ -1454,15 +1585,16 @@ class LidlGUI:
                 product_name = product_data['name']
                 valid_dates = product_data['dates']
                 prices = product_data['prices']
+                unit = product_data.get('unit', self.products_units.get(product_name, '€'))
                 
                 fig.add_trace(go.Scatter(
                     x=valid_dates,
                     y=prices,
                     mode='lines+markers',
                     name=product_name,
-                    hovertemplate='<b>%{fullData.name}</b><br>' +
-                                  'Дата: %{x|%d.%m.%Y}<br>' +
-                                  'Цена: %{y:.2f} €<br>' +
+                    hovertemplate=f'<b>%{{fullData.name}}</b><br>'
+                                  f'Дата: %{{x|%d.%m.%Y}}<br>'
+                                  f'Цена: %{{y:.2f}} {unit}<br>'
                                   '<extra></extra>',
                     line=dict(width=2),
                     marker=dict(size=6)
@@ -1482,7 +1614,7 @@ class LidlGUI:
                     gridcolor='lightgray'
                 ),
                 yaxis=dict(
-                    title=dict(text='Цена (€)', font=dict(size=14)),
+                    title=dict(text='Цена (€/кг · €/100г · €/пакет)', font=dict(size=14)),
                     gridcolor='lightgray'
                 ),
                 hovermode='closest',
@@ -1529,6 +1661,7 @@ class LidlGUI:
                         percent_change = ((last_price - first_price) / first_price) * 100
                         product_changes.append({
                             'name': product_name,
+                            'unit': product_data.get('unit', self.products_units.get(product_name, '€')),
                             'change_percent': percent_change,
                             'min_price': min_price,
                             'max_price': max_price,
@@ -1572,7 +1705,7 @@ class LidlGUI:
                 table_html += f'''
                         <tr style="background-color: {row_bg};">
                             <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold;">{idx}</td>
-                            <td style="padding: 10px; border: 1px solid #ddd;">{item['name']}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">{item['name']} <small style="color:#888">({item.get('unit', self.products_units.get(item['name'], '€'))})</small></td>
                             <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold; color: {change_color};">
                                 {arrow} {item['change_percent']:+.2f}%
                             </td>
@@ -1882,6 +2015,307 @@ class LidlGUI:
         except Exception as e:
             self.log_message(f"❌ Грешка при генериране на графика: {e}")
             return None
+
+
+    def extract_weight_from_name(self, product_name):
+        """Извлича теглото от името на продукта (напр. '500Г', '1КГ', '1,5Л').
+        Връща (weight_kg, unit_label) или (None, None).
+        unit_label е '€/кг' за ≥500г и '€/100г' за по-малки пакети.
+        """
+        upper = product_name.upper()
+        weight_kg = None
+
+        # КГ / KG
+        for pat in [r'(\d+[\.,]?\d*)\s*КГ(?!\w)', r'(\d+[\.,]?\d*)\s*KG(?![A-Z])']:
+            m = re.search(pat, upper)
+            if m:
+                try:
+                    val = float(m.group(1).replace(',', '.'))
+                    if 0.05 <= val <= 25:
+                        weight_kg = val
+                        break
+                except ValueError:
+                    pass
+
+        # Л / L (литри — третираме като кг, плътност ≈ 1)
+        if weight_kg is None:
+            for pat in [r'(\d+[\.,]?\d*)\s*Л(?!\w)', r'(\d+[\.,]?\d*)\s*L(?![A-Z])']:
+                m = re.search(pat, upper)
+                if m:
+                    try:
+                        val = float(m.group(1).replace(',', '.'))
+                        if 0.05 <= val <= 10:
+                            weight_kg = val
+                            break
+                    except ValueError:
+                        pass
+
+        # Г / ГР / G / GR (грамове) — изискваме 2–4 цифри преди единицата
+        if weight_kg is None:
+            for pat in [r'(\d{2,4})\s*ГР?(?!\w)', r'(\d{2,4})\s*GR?(?![A-Z])']:
+                m = re.search(pat, upper)
+                if m:
+                    try:
+                        val = float(m.group(1))
+                        if 10 <= val <= 9999:
+                            weight_kg = val / 1000.0
+                            break
+                    except ValueError:
+                        pass
+
+        if weight_kg is None:
+            return None, None
+
+        unit_label = '€/100г' if weight_kg < 0.5 else '€/кг'
+        return weight_kg, unit_label
+
+    def is_fruit_or_vegetable(self, product_name):
+        """Проверява дали продуктът е плод или зеленчук.
+        Първо проверява дениилиста, после ключовите думи."""
+        upper_name = product_name.upper()
+        # Изключения — продукти, които съдържат ключова дума, но не са плод/зеленчук
+        if any(excl in upper_name for excl in FV_EXCLUDE_KEYWORDS):
+            return False
+        return any(keyword in upper_name for keyword in FRUITS_VEGETABLES_KEYWORDS)
+
+    def generate_seasonal_html(self, fv_data, html_file):
+        """Генерира HTML отчет със сезонно сравнение на цени"""
+
+        # Изграждаме сезонна статистика за всеки продукт
+        seasonal_stats = []
+
+        for product_name, dates_prices in sorted(fv_data.items()):
+            summer_prices = []
+            off_season_prices = []
+
+            for date_str, price in dates_prices.items():
+                try:
+                    month = int(date_str[5:7])
+                except (ValueError, IndexError):
+                    continue
+
+                if month in SUMMER_MONTHS:
+                    summer_prices.append((date_str, price))
+                else:
+                    off_season_prices.append((date_str, price))
+
+            if not summer_prices and not off_season_prices:
+                continue
+
+            avg_summer = sum(p for _, p in summer_prices) / len(summer_prices) if summer_prices else None
+            avg_off = sum(p for _, p in off_season_prices) / len(off_season_prices) if off_season_prices else None
+
+            # Сезонна разлика
+            if avg_summer is not None and avg_off is not None:
+                diff_pct = ((avg_summer - avg_off) / avg_off) * 100
+            else:
+                diff_pct = None
+
+            seasonal_stats.append({
+                'name': product_name,
+                'summer_prices': sorted(summer_prices),
+                'off_season_prices': sorted(off_season_prices),
+                'avg_summer': avg_summer,
+                'avg_off': avg_off,
+                'diff_pct': diff_pct,
+                'all_prices': sorted(list(dates_prices.items())),
+            })
+
+        # Сортираме: продукти с данни и за двата сезона първи, по абс. разлика
+        seasonal_stats.sort(key=lambda x: (
+            0 if x['diff_pct'] is not None else 1,
+            -abs(x['diff_pct']) if x['diff_pct'] is not None else 0
+        ))
+
+        # Строим Plotly данни за JavaScript
+        import json as _json
+
+        traces = []
+        for item in seasonal_stats:
+            if len(item['all_prices']) < 2:
+                continue
+            dates_js = [d for d, _ in item['all_prices']]
+            prices_js = [round(p, 4) for _, p in item['all_prices']]
+            # Цвят според сезонното поведение
+            if item['diff_pct'] is not None:
+                color = '#e74c3c' if item['diff_pct'] > 5 else ('#27ae60' if item['diff_pct'] < -5 else '#3498db')
+            else:
+                color = '#95a5a6'
+            traces.append({
+                'x': dates_js,
+                'y': prices_js,
+                'mode': 'lines+markers',
+                'name': item['name'],
+                'line': {'width': 2, 'color': color},
+                'marker': {'size': 6},
+                'hovertemplate': f'<b>{item["name"]}</b><br>Дата: %{{x}}<br>Цена: %{{y:.2f}} €<extra></extra>'
+            })
+
+        # Маркировка на летните месеци за графиката
+        shapes_js = []
+        for yr in range(2024, 2028):
+            shapes_js.append({
+                'type': 'rect',
+                'xref': 'x', 'yref': 'paper',
+                'x0': f'{yr}-06-01', 'x1': f'{yr}-10-01',
+                'y0': 0, 'y1': 1,
+                'fillcolor': 'rgba(255,200,0,0.10)',
+                'line': {'width': 0},
+                'layer': 'below'
+            })
+
+        traces_json = _json.dumps(traces, ensure_ascii=False)
+        shapes_json = _json.dumps(shapes_js, ensure_ascii=False)
+
+        # Таблица с резултати
+        def fmt_price(p):
+            return f'{p:.2f} €' if p is not None else '–'
+
+        def fmt_diff(d):
+            if d is None:
+                return '–', '#888'
+            color = '#e74c3c' if d > 5 else ('#27ae60' if d < -5 else '#888')
+            arrow = '↑' if d > 0 else '↓'
+            return f'{arrow} {d:+.1f}%', color
+
+        table_rows = ''
+        for idx, item in enumerate(seasonal_stats, 1):
+            diff_text, diff_color = fmt_diff(item['diff_pct'])
+            row_bg = '#f8f9fa' if idx % 2 == 0 else 'white'
+
+            summer_detail = ', '.join(
+                f'<span title="{d}">{round(p, 2):.2f}</span>'
+                for d, p in item['summer_prices']
+            ) or '–'
+            off_detail = ', '.join(
+                f'<span title="{d}">{round(p, 2):.2f}</span>'
+                for d, p in item['off_season_prices']
+            ) or '–'
+
+            table_rows += f'''
+            <tr style="background:{row_bg}">
+              <td style="padding:8px;border:1px solid #ddd;text-align:center">{idx}</td>
+              <td style="padding:8px;border:1px solid #ddd">{item["name"]}</td>
+              <td style="padding:8px;border:1px solid #ddd;text-align:center">{len(item["summer_prices"])}</td>
+              <td style="padding:8px;border:1px solid #ddd;text-align:right">{fmt_price(item["avg_summer"])}</td>
+              <td style="padding:8px;border:1px solid #ddd;text-align:center">{len(item["off_season_prices"])}</td>
+              <td style="padding:8px;border:1px solid #ddd;text-align:right">{fmt_price(item["avg_off"])}</td>
+              <td style="padding:8px;border:1px solid #ddd;text-align:center;font-weight:bold;color:{diff_color}">{diff_text}</td>
+              <td style="padding:8px;border:1px solid #ddd;font-size:11px;color:#555">{summer_detail}</td>
+              <td style="padding:8px;border:1px solid #ddd;font-size:11px;color:#555">{off_detail}</td>
+            </tr>'''
+
+        html = f'''<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <title>Lidl – Сезонен анализ на плодове и зеленчуци</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
+    h1 {{ color: #2c7a2c; }}
+    h2 {{ color: #333; margin-top: 30px; }}
+    .legend-box {{ display: inline-block; width: 14px; height: 14px;
+                   border-radius: 3px; margin-right: 6px; vertical-align: middle; }}
+    .info-banner {{ background: #fff3cd; border-left: 5px solid #ffc107;
+                    padding: 12px 16px; margin-bottom: 20px; border-radius: 4px; }}
+    table {{ width: 100%; border-collapse: collapse; background: white; font-size: 13px; }}
+    thead tr {{ background: #2c7a2c; color: white; }}
+    th {{ padding: 10px; border: 1px solid #999; }}
+    .controls {{ margin-bottom: 16px; }}
+    input[type=text] {{ padding: 7px; width: 260px; border: 1px solid #ccc;
+                        border-radius: 4px; font-size: 14px; }}
+    button {{ padding: 7px 18px; margin: 4px; border: none; border-radius: 4px;
+              cursor: pointer; font-size: 13px; }}
+    .btn-green {{ background: #2c7a2c; color: white; }}
+    .btn-gray  {{ background: #6c757d; color: white; }}
+  </style>
+</head>
+<body>
+  <h1>🌿 Lidl – Сезонен анализ на плодове и зеленчуци</h1>
+
+  <div class="info-banner">
+    <strong>Легенда:</strong>
+    <span class="legend-box" style="background:#ffc107;opacity:0.5"></span> Летен сезон ({SUMMER_MONTHS_NAMES}) &nbsp;|&nbsp;
+    <span style="color:#e74c3c;font-weight:bold">↑ Скъпи лятото</span> (разлика &gt;5%) &nbsp;|&nbsp;
+    <span style="color:#27ae60;font-weight:bold">↓ По-евтини лятото</span> (разлика &lt;–5%) &nbsp;|&nbsp;
+    <span style="color:#888">≈ Без съществена разлика</span><br>
+    <small>Цените са в EUR. Средната лятна цена се сравнява с извън-сезонната (жълтите ленти = юни – септември).</small>
+  </div>
+
+  <h2>📈 Ценова история</h2>
+  <div class="controls">
+    <input type="text" id="searchInput" placeholder="Търси продукт...">
+    <button class="btn-green" onclick="filterTraces()">Филтрирай</button>
+    <button class="btn-gray" onclick="showAllTraces()">Всички</button>
+    <button class="btn-gray" onclick="hideAllTraces()">Скрий всички</button>
+  </div>
+  <div id="chart"></div>
+
+  <h2>📊 Сравнителна таблица по сезон</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Продукт</th>
+        <th>Брой цени<br>(лято)</th>
+        <th>Ср. цена лято<br>({SUMMER_MONTHS_NAMES})</th>
+        <th>Брой цени<br>(извън сезон)</th>
+        <th>Ср. цена извън сезон<br>({OFF_SEASON_MONTHS_NAMES})</th>
+        <th>Разлика</th>
+        <th>Цени лято (€)</th>
+        <th>Цени извън сезон (€)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {table_rows}
+    </tbody>
+  </table>
+
+  <p style="margin-top:20px;color:#666;font-size:12px">
+    Генерирано от Lidl Receipt Downloader • {datetime.now().strftime("%d.%m.%Y %H:%M")}
+  </p>
+
+  <script>
+    var traces = {traces_json};
+    var shapes = {shapes_json};
+    var layout = {{
+      title: 'Цени на плодове и зеленчуци (жълто = летен сезон)',
+      xaxis: {{ title: 'Дата', tickformat: '%d.%m.%Y', rangeslider: {{visible: true}} }},
+      yaxis: {{ title: 'Цена (€/кг)' }},
+      shapes: shapes,
+      hovermode: 'closest',
+      template: 'plotly_white',
+      height: 600,
+      legend: {{ orientation: 'v', x: 1.02, y: 1 }},
+      margin: {{l:60, r:260, t:80, b:60}}
+    }};
+    Plotly.newPlot('chart', traces, layout, {{responsive: true}});
+
+    function filterTraces() {{
+      var q = document.getElementById('searchInput').value.toLowerCase();
+      if (!q) {{ showAllTraces(); return; }}
+      var vis = traces.map(t => t.name.toLowerCase().includes(q));
+      Plotly.restyle('chart', {{visible: vis}});
+    }}
+    function showAllTraces() {{
+      Plotly.restyle('chart', {{visible: traces.map(() => true)}});
+      document.getElementById('searchInput').value = '';
+    }}
+    function hideAllTraces() {{
+      Plotly.restyle('chart', {{visible: traces.map(() => 'legendonly')}});
+    }}
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {{
+      if (e.key === 'Enter') filterTraces();
+    }});
+  </script>
+</body>
+</html>'''
+
+        with open(html_file, 'w', encoding='utf-8') as f:
+            f.write(html)
+
+        self.log_message(f"✓ HTML сезонен отчет запазен: {html_file}")
 
 
 def main():

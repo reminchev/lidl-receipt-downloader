@@ -4,7 +4,7 @@
   "output_dir": "D:/belejki",
   "analysis_file": "D:/belejki/lidl_receipts_20260114_093117.txt",
   "analysis_files": [
-    "D:/belejki/lidl_receipts_20260114_093117.txt",
-    "D:/belejki/Vanko_lidl_receipts.txt"
+    "D:/belejki\\lidl_receipts_20260114_093117.txt",
+    "D:/belejki\\Vanko_lidl_receipts.txt"
   ]
 }
