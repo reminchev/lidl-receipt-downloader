@@ -293,11 +293,47 @@
 
       <div class="section">
         <h2>📁 Генерирани отчети</h2>
-        <div class="reports" id="reports-container">
-          <div class="empty-state">
-            <div class="empty-state-icon">📭</div>
-            <p>Все още няма генерирани отчети. Анализирайте касови бележки, за да видите отчетите тук.</p>
-            <p style="font-size: 12px; color: #bbb;">Отчетите ще се появят автоматично след генериране</p>
+        <div class="reports">
+          <div class="report-card">
+            <div class="report-icon">📊</div>
+            <h3 class="report-title">XLSX – История на цените</h3>
+            <p class="report-description">Excel файл със всички цени по дати, филтрирани продукти и конверсия EUR/BGN</p>
+            <a href="reports/lidl_receipts_20260812_131048_price_analysis.xlsx" class="report-link">📥 Изтегли Excel →</a>
+          </div>
+
+          <div class="report-card">
+            <div class="report-icon">📈</div>
+            <h3 class="report-title">Интерактивна графика</h3>
+            <p class="report-description">Линейни графики с всички продукти, топ 10 скъпи и евтини, интерактивни филтри</p>
+            <a href="reports/lidl_receipts_20260812_131048_price_analysis_interactive_chart.html" class="report-link">📊 Отвори графика →</a>
+          </div>
+
+          <div class="report-card">
+            <div class="report-icon">🌱</div>
+            <h3 class="report-title">Сезонен анализ</h3>
+            <p class="report-description">Сравнение на цените на плодове и зеленчуци през лятото и извън сезона</p>
+            <a href="reports/lidl_receipts_20260812_131048_seasonal_analysis.html" class="report-link">🌿 Отвори анализ →</a>
+          </div>
+
+          <div class="report-card">
+            <div class="report-icon">📊</div>
+            <h3 class="report-title">Годишно сравнение 2025/2026</h3>
+            <p class="report-description">Детайлна таблица със промяна на цени между годините с € конверсия</p>
+            <a href="reports/lidl_receipts_20260812_131048_years_comparison.html" class="report-link">📅 Отвори сравнение →</a>
+          </div>
+
+          <div class="report-card">
+            <div class="report-icon">💾</div>
+            <h3 class="report-title">Локална база данни</h3>
+            <p class="report-description">История на цени от локално хранилище със статистика и тенденции</p>
+            <a href="reports/local_price_history.html" class="report-link">🗄️ Отвори история →</a>
+          </div>
+
+          <div class="report-card">
+            <div class="report-icon">📑</div>
+            <h3 class="report-title">Индекс на отчетите</h3>
+            <p class="report-description">Обзорна страница на всички анализирани отчети с детайли</p>
+            <a href="reports/lidl_receipts_20260812_131048_index.html" class="report-link">📇 Отвори индекс →</a>
           </div>
         </div>
       </div>
@@ -331,13 +367,8 @@
   </div>
 
   <script>
-    // Заредете информация за отчетите от config (ако има)
+    // Обновяване на последната дата при зареждане на страницата
     document.addEventListener('DOMContentLoaded', function() {
-      updateLastModified();
-      loadReportsInfo();
-    });
-
-    function updateLastModified() {
       const lastUpdated = new Date().toLocaleDateString('bg-BG', {
         year: 'numeric',
         month: 'long',
@@ -346,63 +377,7 @@
         minute: '2-digit'
       });
       document.getElementById('last-update').textContent = lastUpdated;
-    }
-
-    function loadReportsInfo() {
-      // Това е плейсхолдер - реалните отчети ще се инжектират от скриптта при генериране
-      const container = document.getElementById('reports-container');
-      const reportsData = window.reportsMetadata || null;
-
-      if (reportsData && Object.keys(reportsData).length > 0) {
-        container.innerHTML = '';
-        
-        if (reportsData.xlsx) {
-          addReportCard(container, '📊', 'XLSX – История на цените', 
-            'Excel файл със всички цени по дати', reportsData.xlsx, true);
-        }
-        if (reportsData.chart) {
-          addReportCard(container, '📈', 'Интерактивна графика', 
-            'Линейни графики с всички продукти и статистика', reportsData.chart, true);
-        }
-        if (reportsData.seasonal) {
-          addReportCard(container, '🌱', 'Сезонен анализ', 
-            'Сравнение на цените на плодове и зеленчуци', reportsData.seasonal, true);
-        }
-        if (reportsData.years) {
-          addReportCard(container, '📊', 'Годишно сравнение', 
-            'Промяна на цени между годините', reportsData.years, true);
-        }
-        if (reportsData.db_report) {
-          addReportCard(container, '💾', 'Локална база данни', 
-            'История на цени от локално хранилище', reportsData.db_report, true);
-        }
-      }
-    }
-
-    function addReportCard(container, icon, title, description, link, hasData) {
-      const card = document.createElement('div');
-      card.className = 'report-card' + (hasData ? '' : ' no-data');
-      
-      const content = `
-        <div class="report-icon">${icon}</div>
-        <h3 class="report-title">${title}</h3>
-        <p class="report-description">${description}</p>
-      `;
-
-      if (hasData && link) {
-        card.innerHTML = content + `
-          <a href="${link}" class="report-link">Отвори отчета →</a>
-          <div class="status-badge">✓ Налично</div>
-        `;
-      } else {
-        card.innerHTML = content + `
-          <button class="report-link" disabled>Няма данни</button>
-          <div class="status-badge no-data">⊘ Недостъпно</div>
-        `;
-      }
-
-      container.appendChild(card);
-    }
+    });
   </script>
 </body>
 </html>
