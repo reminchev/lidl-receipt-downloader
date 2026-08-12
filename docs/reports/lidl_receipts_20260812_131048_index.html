@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lidl Цени Анализ – Начало</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 36px;
+      font-weight: 700;
+    }
+    .tagline {
+      font-size: 18px;
+      opacity: 0.95;
+      margin: 0;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .section {
+      margin-bottom: 35px;
+    }
+    .section h2 {
+      color: #667eea;
+      font-size: 22px;
+      margin-top: 0;
+      border-bottom: 3px solid #f0f0f0;
+      padding-bottom: 10px;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 600px) {
+      .features { grid-template-columns: 1fr; }
+    }
+    .feature {
+      background: #f8f9ff;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+    .feature h3 {
+      color: #667eea;
+      margin-top: 0;
+      font-size: 16px;
+    }
+    .feature p {
+      margin: 8px 0 0;
+      font-size: 14px;
+      color: #666;
+      line-height: 1.5;
+    }
+    .reports {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .report-link {
+      display: block;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      font-weight: 600;
+    }
+    .report-link:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+    .report-link:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .report-link small {
+      display: block;
+      font-size: 12px;
+      opacity: 0.9;
+      margin-top: 4px;
+    }
+    .report-icon {
+      margin-right: 10px;
+      font-size: 18px;
+    }
+    .info-box {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 16px;
+      border-radius: 6px;
+      margin: 20px 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .footer {
+      background: #f8f9fa;
+      padding: 20px 30px;
+      text-align: center;
+      border-top: 1px solid #e0e0e0;
+      font-size: 12px;
+      color: #999;
+    }
+    .timestamp {
+      font-size: 12px;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🛒 Lidl Цени Анализ</h1>
+      <p class="tagline">Проследявайте промените в цените на продуктите във времето</p>
+    </div>
+
+    <div class="content">
+      <div class="section">
+        <h2>📊 Какво прави приложението?</h2>
+        <p>Приложението анализира касови бележки от Lidl България и:</p>
+        <div class="features">
+          <div class="feature">
+            <h3>📈 История на цените</h3>
+            <p>Отслеждане на цените на продуктите във времето с интерактивни графики</p>
+          </div>
+          <div class="feature">
+            <h3>📋 XLSX експорт</h3>
+            <p>Экспортиране на всички данни в Excel за допълнител анализ</p>
+          </div>
+          <div class="feature">
+            <h3>🌱 Сезонен анализ</h3>
+            <p>Сравнение на цените на плодове и зеленчуци през лятото и извън сезона</p>
+          </div>
+          <div class="feature">
+            <h3>📊 Годишно сравнение</h3>
+            <p>Промяна на цен между 2025 и 2026 година с детайлна таблица</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>📁 Генерирани отчети</h2>
+        <div class="reports">
+          <a href="lidl_receipts_20260812_131048_price_analysis.xlsx" class="report-link" title="C:\Users\r.minchev\Documents\lidl_receipts_20260812_131048_price_analysis.xlsx">
+            <span class="report-icon">📊</span>XLSX – История на цените<small>Excel файл със всички цени по дати</small></a>
+          <a href="lidl_receipts_20260812_131048_price_analysis_interactive_chart.html" class="report-link" title="C:\Users\r.minchev\Documents\lidl_receipts_20260812_131048_price_analysis_interactive_chart.html">
+            <span class="report-icon">📈</span>Интерактивна графика<small>Линейни графики с всички продукти</small></a>
+          <a href="lidl_receipts_20260812_131048_seasonal_analysis.html" class="report-link" title="C:\Users\r.minchev\Documents\lidl_receipts_20260812_131048_seasonal_analysis.html">
+            <span class="report-icon">🌱</span>Сезонен анализ<small>Сравнение на цените на плодове и зеленчуци</small></a>
+          <a href="lidl_receipts_20260812_131048_years_comparison.html" class="report-link" title="C:\Users\r.minchev\Documents\lidl_receipts_20260812_131048_years_comparison.html">
+            <span class="report-icon">📊</span>Годишно сравнение 2025/2026<small>Промяна на цени между годините</small></a>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>💡 Как да използвам?</h2>
+        <ol style="line-height: 1.8; color: #666;">
+          <li><strong>Изтеглете касова бележка</strong> – Преведете касовата бележка в текстов файл</li>
+          <li><strong>Добавете файла</strong> – Селектирайте файла в приложението</li>
+          <li><strong>Пуснете анализа</strong> – Приложението обработва данните и генерира отчетите</li>
+          <li><strong>Преглеждайте отчетите</strong> – Отворете генерираните HTML и Excel файлове</li>
+        </ol>
+      </div>
+
+      <div class="info-box">
+        <strong>ℹ️ Забележка:</strong> Всеки нов анализ генерира нови файлове в папката <code>Документи</code>. 
+        Проверете времето на промяна на файловете за да видите кои са най-новите.
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="timestamp">Генерирано: {datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</div>
+      <p style="margin: 10px 0 0;">Lidl Цени Анализ v1.0</p>
+    </div>
+  </div>
+</body>
+</html>

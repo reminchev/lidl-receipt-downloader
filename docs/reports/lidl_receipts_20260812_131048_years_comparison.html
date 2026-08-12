@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <title>Lidl – Сравнение 2025/2026</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    *{ box-sizing:border-box; }
+    body{ font-family:'Segoe UI',Arial,sans-serif; margin:0; padding:16px 20px; background:#f4f6f9; color:#1e293b; }
+    h1{ margin:0 0 4px; font-size:20px; color:#1e3a5f; }
+    .sub{ color:#64748b; font-size:13px; margin-bottom:14px; }
+    .kpi-row{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+    .kpi{ background:white; border-radius:10px; padding:12px 18px; flex:1; min-width:140px;
+            box-shadow:0 1px 4px rgba(0,0,0,.08); border-left:4px solid #cbd5e1; }
+    .kpi.up{ border-color:#d64541; }
+    .kpi.dn{ border-color:#22c55e; }
+    .kpi.neutral{ border-color:#3b82f6; }
+    .kpi .val{ font-size:22px; font-weight:700; line-height:1.1; }
+    .kpi .lbl{ font-size:11px; color:#64748b; margin-top:2px; }
+    .card{ background:white; border-radius:10px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,.08); margin-bottom:16px; }
+    .toggle-row{ display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
+    button{ padding:6px 14px; border:1px solid #cbd5e1; border-radius:6px; cursor:pointer;
+             background:white; color:#334155; font-size:12px; transition:all .15s; }
+    button.active, button:hover{ background:#1e3a5f; color:white; border-color:#1e3a5f; }
+    input#search{ padding:6px 12px; border:1px solid #cbd5e1; border-radius:6px;
+                   font-size:12px; width:220px; outline:none; }
+    table{ width:100%; border-collapse:collapse; font-size:12px; }
+    thead tr{ background:#1e3a5f; color:white; }
+    th{ padding:9px 8px; border:1px solid #2d5080; cursor:pointer; user-select:none; white-space:nowrap; }
+    th:hover{ background:#2b5aa0; }
+    td{ border:1px solid #e2e8f0; padding:7px 8px; }
+    .note{ font-size:11px; color:#94a3b8; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <h1>Сравнение на цени Lidl: 2025 → 2026</h1>
+  <div class="sub">Сортирано по абсолютна промяна &nbsp;|&nbsp; ⚠ = само по 1 измерване (по-малко надеждно)</div>
+
+  <div class="kpi-row">
+    <div class="kpi neutral">
+      <div class="val">168</div>
+      <div class="lbl">сравнени артикула</div>
+    </div>
+    <div class="kpi up">
+      <div class="val">+2.3%</div>
+      <div class="lbl" style="color:#d64541">средна промяна</div>
+    </div>
+    <div class="kpi up">
+      <div class="val">87</div>
+      <div class="lbl">поскъпнали</div>
+    </div>
+    <div class="kpi dn">
+      <div class="val">81</div>
+      <div class="lbl">поевтинели</div>
+    </div>
+    <div class="kpi up">
+      <div class="val" title="БЕЛИ АСПЕРЖИ" style="font-size:14px;color:#d64541">+120.1%</div>
+      <div class="lbl">най-голямо поскъпване: БЕЛИ АСПЕРЖИ</div>
+    </div>
+    <div class="kpi dn">
+      <div class="val" title="МАНГО ЗА БР" style="font-size:14px;color:#22c55e">-71.4%</div>
+      <div class="lbl">най-голямо поевтиняване: МАНГО ЗА БР</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="toggle-row">
+      <button class="active" onclick="showChart('diverging')">% Промяна</button>
+      <button onclick="showChart('grouped')">2025 vs 2026</button>
+      <button id="btnTop" class="active" onclick="toggleTop()">Топ 20</button>
+      <button id="btnAll" onclick="toggleTop()">Всички (168)</button>
+    </div>
+    <div id="chart"></div>
+  </div>
+
+  <div class="card">
+    <div class="toggle-row">
+      <input id="search" type="text" placeholder="Търси артикул…" oninput="filterTable()">
+      <label style="font-size:12px;color:#64748b;margin-left:8px">
+        <input type="checkbox" id="hideWeak" onchange="filterTable()"> Скрий ниско-надеждни
+      </label>
+      <span id="count" style="margin-left:auto;font-size:12px;color:#94a3b8"></span>
+    </div>
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th onclick="sortTable(0)">#</th>
+          <th onclick="sortTable(1)">Артикул ↕</th>
+          <th onclick="sortTable(2)">Единица</th>
+          <th onclick="sortTable(3)">Ср. 2025 ↕</th>
+          <th onclick="sortTable(4)">Ср. 2026 ↕</th>
+          <th onclick="sortTable(5)">Промяна % ↕</th>
+          <th onclick="sortTable(6)">Изм. 2025</th>
+          <th onclick="sortTable(7)">Изм. 2026</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">1</td>
+              <td>БЕЛИ АСПЕРЖИ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">4.08 €</td>
+              <td style="text-align:right">8.98 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+120.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">2</td>
+              <td>ЗАМРАЗЕНИ ВИШНИ, Б.К<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">2.04 €</td>
+              <td style="text-align:right">4.09 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+100.5%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">3</td>
+              <td>ПРАЗ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.78 €</td>
+              <td style="text-align:right">3.56 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+99.5%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">4</td>
+              <td>МАНГО ЗА БР</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.78 €</td>
+              <td style="text-align:right">0.51 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-71.4%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">5</td>
+              <td>ЧУШКИ, ЧЕРВЕНИ НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.49 €</td>
+              <td style="text-align:right">4.22 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+69.8%</td>
+              <td style="text-align:center;color:#999">5</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">6</td>
+              <td>ДОМАТИ КЛОНКА НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.41 €</td>
+              <td style="text-align:right">2.33 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+65.8%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">8</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">7</td>
+              <td>ЧЕРИ ДОМАТИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">6.07 €</td>
+              <td style="text-align:right">2.24 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-63.1%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">8</td>
+              <td>ЛУК НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.30 €</td>
+              <td style="text-align:right">0.48 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+60.2%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">9</td>
+              <td>ДОМАТИ, ЧЕРИ НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.57 €</td>
+              <td style="text-align:right">3.96 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+54.1%</td>
+              <td style="text-align:center;color:#999">14</td>
+              <td style="text-align:center;color:#999">8</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">10</td>
+              <td>ПУК.ЛЮТИ ЧУШКИ, МАР<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.02 €</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+50.4%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">11</td>
+              <td>МОРКОВИ НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.70 €</td>
+              <td style="text-align:right">1.04 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+50.0%</td>
+              <td style="text-align:center;color:#999">7</td>
+              <td style="text-align:center;color:#999">7</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">12</td>
+              <td>БИО СИРОП ОТ АГАВЕ</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">2.04 €</td>
+              <td style="text-align:right">3.06 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+50.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">13</td>
+              <td>КАРТОФИ, ПРЕСНИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:right">0.79 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-48.3%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">14</td>
+              <td>КУС КУС</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.61 €</td>
+              <td style="text-align:right">0.33 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-46.1%</td>
+              <td style="text-align:center;color:#999">7</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">15</td>
+              <td>ПРЯСНО ТЕСТО ЗА ПИЦА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.38 €</td>
+              <td style="text-align:right">1.96 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+42.4%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">8</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">16</td>
+              <td>ГЪБИ ПЕЧУРКА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">6.12 €</td>
+              <td style="text-align:right">3.71 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-39.4%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">8</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">17</td>
+              <td>МИНИ ДИНЯ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.04 €</td>
+              <td style="text-align:right">1.29 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-36.8%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">18</td>
+              <td>БОРОВИНКИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">7.72 €</td>
+              <td style="text-align:right">10.40 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+34.8%</td>
+              <td style="text-align:center;color:#999">6</td>
+              <td style="text-align:center;color:#999">5</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">19</td>
+              <td>ПЪПЕШ МЕДЕНА РОСА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.06 €</td>
+              <td style="text-align:right">2.03 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-33.7%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">7</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">20</td>
+              <td>КЮФТЕ МЛАД. ТЕЛЕШКО<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">3.83 €</td>
+              <td style="text-align:right">5.11 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+33.4%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">21</td>
+              <td>КИВИ НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">4.60 €</td>
+              <td style="text-align:right">3.06 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-33.4%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">22</td>
+              <td>КАРТОФИ, ЧЕТКАНИ НА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.35 €</td>
+              <td style="text-align:right">0.47 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+33.2%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">23</td>
+              <td>МИТИ КАРТОФИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.35 €</td>
+              <td style="text-align:right">0.92 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-32.1%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">24</td>
+              <td>ПРЯСНО КРАВЕ МАСЛО</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">3.06 €</td>
+              <td style="text-align:right">2.09 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-31.8%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">25</td>
+              <td>ТОРБИ ЗА СМЕТ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.74 €</td>
+              <td style="text-align:right">0.51 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-30.7%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">26</td>
+              <td>КРОАСАН С КРЕНВИРШ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.71 €</td>
+              <td style="text-align:right">0.92 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+29.5%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">27</td>
+              <td>КАРФИОЛ НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.20 €</td>
+              <td style="text-align:right">2.79 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+26.6%</td>
+              <td style="text-align:center;color:#999">8</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">28</td>
+              <td>СОС БЕШАМЕЛ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.04 €</td>
+              <td style="text-align:right">1.50 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-26.6%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">29</td>
+              <td>VASTON СЬОМГ.ПЪСТЪР<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">11.75 €</td>
+              <td style="text-align:right">14.82 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+26.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">30</td>
+              <td>ЯГОДИ 500Г ТАРЕЛКА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">5.10 €</td>
+              <td style="text-align:right">3.81 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-25.2%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">6</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">31</td>
+              <td>НЕМСКО МАСЛО</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">13.27 €</td>
+              <td style="text-align:right">10.00 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-24.7%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">32</td>
+              <td>ТИКВИЧКИ НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.04 €</td>
+              <td style="text-align:right">1.54 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-24.5%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">6</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">33</td>
+              <td>СВИНСКИ ВРАТ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">4.60 €</td>
+              <td style="text-align:right">3.47 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-24.5%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">34</td>
+              <td>ДИНЯ С МАЛКО СЕМ.КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.32 €</td>
+              <td style="text-align:right">1.64 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+23.8%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">35</td>
+              <td>СВИНСКИ КЮФТЕТА<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.83 €</td>
+              <td style="text-align:right">2.95 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-23.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">36</td>
+              <td>СВИНСКИ КЕБАПЧЕТА<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.83 €</td>
+              <td style="text-align:right">2.95 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-23.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">37</td>
+              <td>ПОПИВАТЕЛНИ КЪРПИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.66 €</td>
+              <td style="text-align:right">0.51 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-22.1%</td>
+              <td style="text-align:center;color:#999">5</td>
+              <td style="text-align:center;color:#999">5</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">38</td>
+              <td>JAMESON IRISH УИСКИ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">18.81 €</td>
+              <td style="text-align:right">14.99 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-20.3%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">39</td>
+              <td>КАРТОФИ, ЧЕРВ НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.27 €</td>
+              <td style="text-align:right">1.02 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-19.9%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">40</td>
+              <td>ДОМАТИ, РОЗОВИ НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.19 €</td>
+              <td style="text-align:right">2.62 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+19.4%</td>
+              <td style="text-align:center;color:#999">5</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">41</td>
+              <td>GGN/MSC СУШИ SAPPORO<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">6.13 €</td>
+              <td style="text-align:right">7.15 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+16.6%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">42</td>
+              <td>ЛУК, ЧЕРВЕН НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.42 €</td>
+              <td style="text-align:right">1.18 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-16.6%</td>
+              <td style="text-align:center;color:#999">10</td>
+              <td style="text-align:center;color:#999">9</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">43</td>
+              <td>КРАСТАВИЦИ ЗА БР</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.69 €</td>
+              <td style="text-align:right">0.80 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+15.8%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">6</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">44</td>
+              <td>ЯГОДИ 250Г - ТАРЕЛКА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">7.14 €</td>
+              <td style="text-align:right">8.20 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+14.9%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">45</td>
+              <td>МАСЛИНЕН МИКС Б.КОСТ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.86 €</td>
+              <td style="text-align:right">0.99 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+14.6%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">46</td>
+              <td>МИНИ ШОКОЛАДЧЕ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">0.71 €</td>
+              <td style="text-align:right">0.81 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+14.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">47</td>
+              <td>ЯБЪЛКИ ЗЕЛ.ЗЛАТН КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.04 €</td>
+              <td style="text-align:right">1.78 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-12.7%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">48</td>
+              <td>ГЪБА КЛАДНИЦА<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">8.16 €</td>
+              <td style="text-align:right">9.20 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+12.7%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">49</td>
+              <td>УЩИПЦИ С КАШКАВАЛ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">4.09 €</td>
+              <td style="text-align:right">3.57 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-12.6%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">50</td>
+              <td>MEAT REV ARG.RIBEYE</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">10.68 €</td>
+              <td style="text-align:right">12.01 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+12.4%</td>
+              <td style="text-align:center;color:#999">10</td>
+              <td style="text-align:center;color:#999">6</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">51</td>
+              <td>КРУШИ НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.04 €</td>
+              <td style="text-align:right">2.29 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+12.4%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">9</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">52</td>
+              <td>МЕСО ЗA ГОТВ.ПИЛ.Ф</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.83 €</td>
+              <td style="text-align:right">3.39 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-11.5%</td>
+              <td style="text-align:center;color:#999">4</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">53</td>
+              <td>ГРОЗДЕ МИКС</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">3.14 €</td>
+              <td style="text-align:right">2.79 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-11.1%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">54</td>
+              <td>БИРЕНИ ПРЪЧИЦИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">4.01 €</td>
+              <td style="text-align:right">3.58 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-10.8%</td>
+              <td style="text-align:center;color:#999">4</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">55</td>
+              <td>ОБИКНОВЕНИ БИСКВИТИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.23 €</td>
+              <td style="text-align:right">1.36 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+10.3%</td>
+              <td style="text-align:center;color:#999">19</td>
+              <td style="text-align:center;color:#999">9</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">56</td>
+              <td>ПЪПЕШ ГАЛИЯ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.87 €</td>
+              <td style="text-align:right">2.05 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+10.0%</td>
+              <td style="text-align:center;color:#999">11</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">57</td>
+              <td>ДЕЛИКАТЕСНА МАЙОНЕЗА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.43 €</td>
+              <td style="text-align:right">2.67 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+9.9%</td>
+              <td style="text-align:center;color:#999">12</td>
+              <td style="text-align:center;color:#999">11</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">58</td>
+              <td>ВАНИЛ.СЛАД ВЪВ ВАЛФ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.03 €</td>
+              <td style="text-align:right">3.32 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+9.4%</td>
+              <td style="text-align:center;color:#999">17</td>
+              <td style="text-align:center;color:#999">12</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">59</td>
+              <td>ПРЯСНО ПИЛЕШКО ФИЛЕ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">6.12 €</td>
+              <td style="text-align:right">5.56 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-9.1%</td>
+              <td style="text-align:center;color:#999">4</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">60</td>
+              <td>КАРТОФИ, МИТИ НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.96 €</td>
+              <td style="text-align:right">0.88 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-8.6%</td>
+              <td style="text-align:center;color:#999">12</td>
+              <td style="text-align:center;color:#999">10</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">61</td>
+              <td>СОЛЕТИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.57 €</td>
+              <td style="text-align:right">0.52 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-8.4%</td>
+              <td style="text-align:center;color:#999">26</td>
+              <td style="text-align:center;color:#999">8</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">62</td>
+              <td>ГЕВРЕК СИР/СУС</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.84 €</td>
+              <td style="text-align:right">0.77 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-8.1%</td>
+              <td style="text-align:center;color:#999">5</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">63</td>
+              <td>ГРОЗДЕ, БЯЛО БЕЗ СЕМ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.55 €</td>
+              <td style="text-align:right">2.76 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+8.1%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">5</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">64</td>
+              <td>ДИРЕК.СОК АНАН.МАРАК</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.33 €</td>
+              <td style="text-align:right">3.57 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+7.1%</td>
+              <td style="text-align:center;color:#999">7</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">65</td>
+              <td>ШУНКА ОТ ПТИЧЕ МЕСО</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">5.78 €</td>
+              <td style="text-align:right">6.18 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+6.9%</td>
+              <td style="text-align:center;color:#999">28</td>
+              <td style="text-align:center;color:#999">20</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">66</td>
+              <td>КЮФТЕ СТАРА ПЛАНИНА<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">3.83 €</td>
+              <td style="text-align:right">3.57 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-6.8%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">67</td>
+              <td>КАЙМА СМЕС 60/40</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.01 €</td>
+              <td style="text-align:right">3.21 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+6.8%</td>
+              <td style="text-align:center;color:#999">16</td>
+              <td style="text-align:center;color:#999">12</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">68</td>
+              <td>ЦАРИГРАДСКИ КЮФТЕНЦА</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">4.60 €</td>
+              <td style="text-align:right">4.29 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-6.7%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">5</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">69</td>
+              <td>ЗЛАТ ДОБРУД СОЛЕТИ К</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.26 €</td>
+              <td style="text-align:right">0.28 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+6.0%</td>
+              <td style="text-align:center;color:#999">6</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">70</td>
+              <td>КАРТОФИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.87 €</td>
+              <td style="text-align:right">0.82 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-5.9%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">71</td>
+              <td>МОРКОВИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.68 €</td>
+              <td style="text-align:right">1.78 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+5.8%</td>
+              <td style="text-align:center;color:#999">5</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">72</td>
+              <td>ИТ. СПЕЦИАЛ. С МЕСО</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.37 €</td>
+              <td style="text-align:right">2.50 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+5.4%</td>
+              <td style="text-align:center;color:#999">4</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">73</td>
+              <td>SCHWEPPES PINK TOНИК<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.41 €</td>
+              <td style="text-align:right">1.48 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+5.3%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">74</td>
+              <td>ИТАЛИАНСКИ СПЕЦИАЛИТ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.37 €</td>
+              <td style="text-align:right">2.50 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+5.2%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">75</td>
+              <td>ТОПЕНО СИРЕНЕ ПУШЕНО</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">2.42 €</td>
+              <td style="text-align:right">2.55 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+5.2%</td>
+              <td style="text-align:center;color:#999">6</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">76</td>
+              <td>ИТ.СПЕЦ-ДОМ.-МОЦАР</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.31 €</td>
+              <td style="text-align:right">2.43 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+5.1%</td>
+              <td style="text-align:center;color:#999">4</td>
+              <td style="text-align:center;color:#999">7</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">77</td>
+              <td>ПРЯСНО СИРЕНЕ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">5.53 €</td>
+              <td style="text-align:right">5.25 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-5.0%</td>
+              <td style="text-align:center;color:#999">28</td>
+              <td style="text-align:center;color:#999">18</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">78</td>
+              <td>ТРАПЕЗНА ВОДА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.56 €</td>
+              <td style="text-align:right">0.58 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+5.0%</td>
+              <td style="text-align:center;color:#999">6</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">79</td>
+              <td>ЧУШКИ ЧЕРВ КАЛИФ. КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.42 €</td>
+              <td style="text-align:right">3.59 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+5.0%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">80</td>
+              <td>ЯБЪЛКИ ЗЕЛ. БЪЛГ.КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.43 €</td>
+              <td style="text-align:right">1.36 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-4.7%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">81</td>
+              <td>ФУСИЛИ ОТ МЕК.ПШ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.58 €</td>
+              <td style="text-align:right">0.61 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+4.7%</td>
+              <td style="text-align:center;color:#999">8</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">82</td>
+              <td>ПРЕСНИ ЯЙЦА L,</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">3.06 €</td>
+              <td style="text-align:right">3.20 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+4.5%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">83</td>
+              <td>ДУШГЕЛ400MLPUREFRESH</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.32 €</td>
+              <td style="text-align:right">1.27 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-4.1%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">84</td>
+              <td>ДУШ ГЕЛ400ML LIME</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.32 €</td>
+              <td style="text-align:right">1.27 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-4.1%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">85</td>
+              <td>СОК ОТ ЯБЪЛКА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.60 €</td>
+              <td style="text-align:right">2.50 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-4.0%</td>
+              <td style="text-align:center;color:#999">15</td>
+              <td style="text-align:center;color:#999">39</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">86</td>
+              <td>ALWAYS ULT.ДАМ.ПРЕВР</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">4.42 €</td>
+              <td style="text-align:right">4.59 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+3.9%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">87</td>
+              <td>САЛАТА СЪС СИРЕНЕ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.22 €</td>
+              <td style="text-align:right">2.29 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+3.6%</td>
+              <td style="text-align:center;color:#999">7</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">88</td>
+              <td>СВИН. ВРАТ БЕЗ КОСТ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">5.18 €</td>
+              <td style="text-align:right">5.36 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+3.5%</td>
+              <td style="text-align:center;color:#999">7</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">89</td>
+              <td>ОВЕСЕНИ ЯДКИ ФИНИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.97 €</td>
+              <td style="text-align:right">0.93 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-3.4%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">90</td>
+              <td>СВИНСКИ ГЪРДИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">7.43 €</td>
+              <td style="text-align:right">7.66 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+3.2%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">91</td>
+              <td>ИТ.СПЕЦ-РИКОТА-СПАН</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">2.45 €</td>
+              <td style="text-align:right">2.37 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-3.1%</td>
+              <td style="text-align:center;color:#999">5</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">92</td>
+              <td>СВ.ВРАТ МЕКСИКО<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">8.43 €</td>
+              <td style="text-align:right">8.18 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-3.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">93</td>
+              <td>КРАВЕ СИРЕНЕЗНП</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">10.54 €</td>
+              <td style="text-align:right">10.22 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-3.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">94</td>
+              <td>СОК ОТ ПОРТОКАЛ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.14 €</td>
+              <td style="text-align:right">3.05 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-3.0%</td>
+              <td style="text-align:center;color:#999">22</td>
+              <td style="text-align:center;color:#999">6</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">95</td>
+              <td>БАНАНИ НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.68 €</td>
+              <td style="text-align:right">1.73 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+2.9%</td>
+              <td style="text-align:center;color:#999">48</td>
+              <td style="text-align:center;color:#999">23</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">96</td>
+              <td>ПАНИРАН ПИЛ. ШНИЦЕЛ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.67 €</td>
+              <td style="text-align:right">2.75 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+2.9%</td>
+              <td style="text-align:center;color:#999">22</td>
+              <td style="text-align:center;color:#999">21</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">97</td>
+              <td>ГАЩИЧКИ РАЗМЕР 5<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">9.71 €</td>
+              <td style="text-align:right">9.97 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+2.7%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">98</td>
+              <td>КРЕМ СИРЕНЕ КЛАСИК</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.49 €</td>
+              <td style="text-align:right">2.55 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+2.5%</td>
+              <td style="text-align:center;color:#999">16</td>
+              <td style="text-align:center;color:#999">19</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">99</td>
+              <td>ПРЕСНИ ЯЙЦА РАЗМ.L</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">2.55 €</td>
+              <td style="text-align:right">2.50 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-2.2%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">100</td>
+              <td>БЛЕК АНГЪС СТЕК</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">8.01 €</td>
+              <td style="text-align:right">8.18 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+2.2%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">101</td>
+              <td>ОРИЗ СРЕДНОЗЪРНЕСТ</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">1.60 €</td>
+              <td style="text-align:right">1.57 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-2.1%</td>
+              <td style="text-align:center;color:#999">11</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">102</td>
+              <td>АНГЛИЙСКИ ЧЕДЪР</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">13.41 €</td>
+              <td style="text-align:right">13.68 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+2.0%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">103</td>
+              <td>КРЕНВИРШИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.38 €</td>
+              <td style="text-align:right">3.31 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-1.9%</td>
+              <td style="text-align:center;color:#999">20</td>
+              <td style="text-align:center;color:#999">27</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">104</td>
+              <td>ПАСТЕТ ЗА ДЕЦА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.84 €</td>
+              <td style="text-align:right">0.86 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+1.8%</td>
+              <td style="text-align:center;color:#999">13</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">105</td>
+              <td>ЧЕРЕШИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">4.56 €</td>
+              <td style="text-align:right">4.48 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-1.7%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">106</td>
+              <td>БИО ПЛОДОВА ЗАКУСКА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.70 €</td>
+              <td style="text-align:right">0.71 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+1.5%</td>
+              <td style="text-align:center;color:#999">14</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">107</td>
+              <td>ЧУВАЛ ЗА СМЕТ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.88 €</td>
+              <td style="text-align:right">0.89 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+1.3%</td>
+              <td style="text-align:center;color:#999">7</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">108</td>
+              <td>СЛЪНЧОГЛЕДОВО ОЛИО</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.89 €</td>
+              <td style="text-align:right">1.92 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+1.2%</td>
+              <td style="text-align:center;color:#999">9</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">109</td>
+              <td>КРАСТАВИЦИ НА КГ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.39 €</td>
+              <td style="text-align:right">2.41 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+1.0%</td>
+              <td style="text-align:center;color:#999">11</td>
+              <td style="text-align:center;color:#999">15</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">110</td>
+              <td>МИНИ ДЖОЛАНИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">5.68 €</td>
+              <td style="text-align:right">5.62 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-1.0%</td>
+              <td style="text-align:center;color:#999">9</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">111</td>
+              <td>QUANTUM СОВИН. БЛАН</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">5.62 €</td>
+              <td style="text-align:right">5.67 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.9%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">112</td>
+              <td>САЛАТА АЙСБЕРГ ЗА БР</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.31 €</td>
+              <td style="text-align:right">1.30 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.8%</td>
+              <td style="text-align:center;color:#999">31</td>
+              <td style="text-align:center;color:#999">22</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">113</td>
+              <td>KЮФТЕ С БЕКОН ЛУК</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.81 €</td>
+              <td style="text-align:right">2.79 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.6%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">114</td>
+              <td>МЕКСИКО МИКС</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.16 €</td>
+              <td style="text-align:right">1.17 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.5%</td>
+              <td style="text-align:center;color:#999">8</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">115</td>
+              <td>КОПЪР<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">0.86 €</td>
+              <td style="text-align:right">0.86 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.5%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">116</td>
+              <td>СМЕС ОТ ЯДКИ, ПЪРЖЕН</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">0.86 €</td>
+              <td style="text-align:right">0.86 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.5%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">117</td>
+              <td>КАЙМА 60/40 СТ.ПЛАН</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">4.09 €</td>
+              <td style="text-align:right">4.07 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.5%</td>
+              <td style="text-align:center;color:#999">6</td>
+              <td style="text-align:center;color:#999">5</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">118</td>
+              <td>ГАЛЕТА<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">0.95 €</td>
+              <td style="text-align:right">0.95 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.4%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">119</td>
+              <td>ЗАКВАСЕНА СМЕТАНА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.79 €</td>
+              <td style="text-align:right">1.78 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.4%</td>
+              <td style="text-align:center;color:#999">8</td>
+              <td style="text-align:center;color:#999">13</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">120</td>
+              <td>КИСЕЛО КРАВЕ МЛЯКО</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.79 €</td>
+              <td style="text-align:right">0.79 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.3%</td>
+              <td style="text-align:center;color:#999">8</td>
+              <td style="text-align:center;color:#999">5</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">121</td>
+              <td>ЙОГУРТ ЧЕРЕША</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.38 €</td>
+              <td style="text-align:right">1.38 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.3%</td>
+              <td style="text-align:center;color:#999">4</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">122</td>
+              <td>ГЪБА ЗА СЪДОВЕ</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">0.61 €</td>
+              <td style="text-align:right">0.61 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.3%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">123</td>
+              <td>ДЕТСКА ЧЕТКА ЗА ЗЪБИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.02 €</td>
+              <td style="text-align:right">1.02 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.2%</td>
+              <td style="text-align:center;color:#999">4</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">124</td>
+              <td>ГЕЛ ЗА МЪЖЕ ОВЛАЖН<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.78 €</td>
+              <td style="text-align:right">1.78 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.2%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">125</td>
+              <td>КОЗМЕТИЧНИ КЪРПИЧКИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.27 €</td>
+              <td style="text-align:right">1.27 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.2%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">9</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">126</td>
+              <td>ПЕСТО ДЖЕНОВЕЗЕ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.27 €</td>
+              <td style="text-align:right">1.27 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.2%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">127</td>
+              <td>ЧЕТКА ЗА ЗЪБИ КЛАС М<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.76 €</td>
+              <td style="text-align:right">0.76 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.2%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">128</td>
+              <td>НИШЕСТЕ ЯГОДА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.25 €</td>
+              <td style="text-align:right">0.25 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.2%</td>
+              <td style="text-align:center;color:#999">11</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">129</td>
+              <td>СОЛЕТИ КЛАСИК</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.74 €</td>
+              <td style="text-align:right">0.74 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.2%</td>
+              <td style="text-align:center;color:#999">4</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">130</td>
+              <td>ТОРТИЛЯ ПИТКИ</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">1.48 €</td>
+              <td style="text-align:right">1.48 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.2%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">131</td>
+              <td>ALWAYS ULTRA SC.NIGH</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.65 €</td>
+              <td style="text-align:right">2.65 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.1%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">132</td>
+              <td>ФУСИЛИ</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">1.20 €</td>
+              <td style="text-align:right">1.20 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">133</td>
+              <td>КРАВЕ КАШКАВАЛ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">4.09 €</td>
+              <td style="text-align:right">4.09 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">134</td>
+              <td>ДИРЕКТЕН СОК</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">4.09 €</td>
+              <td style="text-align:right">4.09 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">5</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">135</td>
+              <td>СИРОПИРАН СЛАДКИШ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.57 €</td>
+              <td style="text-align:right">3.57 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">136</td>
+              <td>КАШУ СУРОВО<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.57 €</td>
+              <td style="text-align:right">3.57 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">137</td>
+              <td>ШАМ ФЪСТЪК ОСОЛЕН<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">3.57 €</td>
+              <td style="text-align:right">3.57 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">138</td>
+              <td>ЯДКИ СМЕСЕНИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.57 €</td>
+              <td style="text-align:right">3.57 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.1%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">139</td>
+              <td>МАНАТАРКИ НА КУБЧЕТА<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">3.57 €</td>
+              <td style="text-align:right">3.57 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">140</td>
+              <td>СВИНСКА КАЙМА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.81 €</td>
+              <td style="text-align:right">2.81 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">8</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">141</td>
+              <td>СЛАДОЛЕД ЩРУДЕЛ ТИР</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">3.06 €</td>
+              <td style="text-align:right">3.06 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.1%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">142</td>
+              <td>СЛАДОЛЕД ЩРУДЕЛ МАСК<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">3.06 €</td>
+              <td style="text-align:right">3.06 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">143</td>
+              <td>БАДЕМИ СУРОВИ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.06 €</td>
+              <td style="text-align:right">3.06 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">144</td>
+              <td>Д.ПРЕВР.С АЛОЕ НОЩНИ</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">145</td>
+              <td>ТИКВИЧКИ С МЛЯКО</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">146</td>
+              <td>СОЛЕНКИ ПАНДЕЛКИ СИР</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">5</td>
+              <td style="text-align:center;color:#999">7</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">147</td>
+              <td>ЕЖЕДН. ШАМП. БИЛКИ</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">148</td>
+              <td>ЕЖЕДН.ШАМП. ВИТАМИНИ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">149</td>
+              <td>СОЛЕНКИ СЪС СИРЕНЕ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:right">1.53 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">150</td>
+              <td>БАНИЧКИ СЪС СИРЕНЕ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">4.60 €</td>
+              <td style="text-align:right">4.60 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">151</td>
+              <td>ЧЕР.МАС.БЕЗ КОСТИЛКА</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">2.86 €</td>
+              <td style="text-align:right">2.86 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">152</td>
+              <td>ПЛ.БАРЧЕ ЯБЪЛКА,БАН</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.66 €</td>
+              <td style="text-align:right">0.66 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">153</td>
+              <td>ПЛОД. БАРЧЕ С АРОНИЯ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.66 €</td>
+              <td style="text-align:right">0.66 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">154</td>
+              <td>ПЛ.БАРЧЕ КРУША,БАНАН</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.66 €</td>
+              <td style="text-align:right">0.66 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">155</td>
+              <td>ФРЕНСКИ КИФЛИЧКИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.55 €</td>
+              <td style="text-align:right">2.55 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">156</td>
+              <td>ЗАМР.ЕКЗОТ.ПЛОД.АВОК</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.55 €</td>
+              <td style="text-align:right">2.55 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.1%</td>
+              <td style="text-align:center;color:#999">11</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">157</td>
+              <td>РИЗОТО ШАФРАН</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">2.55 €</td>
+              <td style="text-align:right">2.55 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.1%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">158</td>
+              <td>МАСКАРПОНЕ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">4.85 €</td>
+              <td style="text-align:right">4.85 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.0%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">159</td>
+              <td>ИТ. ДЕСЕРТ ТИРАМИСУ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">5.11 €</td>
+              <td style="text-align:right">5.11 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">160</td>
+              <td>КАРТОФИ ПО СЕЛСКИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.30 €</td>
+              <td style="text-align:right">2.29 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">161</td>
+              <td>ПАСИРАНИ ДОМАТИ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.12 €</td>
+              <td style="text-align:right">1.12 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">162</td>
+              <td>МЛАДА ЦАРЕВИЦА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.12 €</td>
+              <td style="text-align:right">1.12 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.0%</td>
+              <td style="text-align:center;color:#999">6</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">163</td>
+              <td>МЕКО СИРЕНЕ С Ч. ПИП</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">21.93 €</td>
+              <td style="text-align:right">21.93 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.0%</td>
+              <td style="text-align:center;color:#999">4</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">164</td>
+              <td>CHEF SEL.КОРДОН БЛЬО</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">4.34 €</td>
+              <td style="text-align:right">4.34 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">165</td>
+              <td>ЧИЙЗБУРГЕР С ПИЛЕШКО<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">2.96 €</td>
+              <td style="text-align:right">2.96 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">166</td>
+              <td>ЗАМР.СЬОМГА ФИЛ.,Б.К</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">11.50 €</td>
+              <td style="text-align:right">11.50 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#f3fff3;opacity:0.65;">
+              <td style="text-align:center">167</td>
+              <td>МАНДАРИНИ КЛЕМЕН КГ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">2.04 €</td>
+              <td style="text-align:right">2.04 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-0.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">168</td>
+              <td>МОЦАРЕЛА</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">4.75 €</td>
+              <td style="text-align:right">4.75 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+0.0%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr></tbody>
+    </table>
+    <div class="note">Промяната е изчислена спрямо средна цена за годината. Продукти с 1 измерване са маркирани ⚠.</div>
+  </div>
+
+  <script>
+    var ALL = [{"product": "БЕЛИ АСПЕРЖИ", "label": "БЕЛИ АСПЕРЖИ", "basis": "€/кг", "avg_2025": 4.08, "avg_2026": 8.98, "change_pct": 120.1, "low_conf": true}, {"product": "ЗАМРАЗЕНИ ВИШНИ, Б.К", "label": "ЗАМРАЗЕНИ ВИШНИ, Б.К", "basis": "€/пакет", "avg_2025": 2.04, "avg_2026": 4.09, "change_pct": 100.5, "low_conf": true}, {"product": "ПРАЗ", "label": "ПРАЗ", "basis": "€/кг", "avg_2025": 1.78, "avg_2026": 3.56, "change_pct": 99.5, "low_conf": true}, {"product": "МАНГО ЗА БР", "label": "МАНГО ЗА БР", "basis": "€/кг", "avg_2025": 1.78, "avg_2026": 0.51, "change_pct": -71.4, "low_conf": false}, {"product": "ЧУШКИ, ЧЕРВЕНИ НА КГ", "label": "ЧУШКИ, ЧЕРВЕНИ НА КГ", "basis": "€/кг", "avg_2025": 2.49, "avg_2026": 4.22, "change_pct": 69.8, "low_conf": false}, {"product": "ДОМАТИ КЛОНКА НА КГ", "label": "ДОМАТИ КЛОНКА НА КГ", "basis": "€/кг", "avg_2025": 1.41, "avg_2026": 2.33, "change_pct": 65.8, "low_conf": false}, {"product": "ЧЕРИ ДОМАТИ", "label": "ЧЕРИ ДОМАТИ", "basis": "€/кг", "avg_2025": 6.07, "avg_2026": 2.24, "change_pct": -63.1, "low_conf": false}, {"product": "ЛУК НА КГ", "label": "ЛУК НА КГ", "basis": "€/кг", "avg_2025": 0.3, "avg_2026": 0.48, "change_pct": 60.2, "low_conf": false}, {"product": "ДОМАТИ, ЧЕРИ НА КГ", "label": "ДОМАТИ, ЧЕРИ НА КГ", "basis": "€/кг", "avg_2025": 2.57, "avg_2026": 3.96, "change_pct": 54.1, "low_conf": false}, {"product": "ПУК.ЛЮТИ ЧУШКИ, МАР", "label": "ПУК.ЛЮТИ ЧУШКИ, МАР", "basis": "€/кг", "avg_2025": 1.02, "avg_2026": 1.53, "change_pct": 50.4, "low_conf": true}, {"product": "МОРКОВИ НА КГ", "label": "МОРКОВИ НА КГ", "basis": "€/кг", "avg_2025": 0.7, "avg_2026": 1.04, "change_pct": 50.0, "low_conf": false}, {"product": "БИО СИРОП ОТ АГАВЕ", "label": "БИО СИРОП ОТ АГАВЕ", "basis": "€/пакет", "avg_2025": 2.04, "avg_2026": 3.06, "change_pct": 50.0, "low_conf": false}, {"product": "КАРТОФИ, ПРЕСНИ", "label": "КАРТОФИ, ПРЕСНИ", "basis": "€/кг", "avg_2025": 1.53, "avg_2026": 0.79, "change_pct": -48.3, "low_conf": false}, {"product": "КУС КУС", "label": "КУС КУС", "basis": "€/кг", "avg_2025": 0.61, "avg_2026": 0.33, "change_pct": -46.1, "low_conf": false}, {"product": "ПРЯСНО ТЕСТО ЗА ПИЦА", "label": "ПРЯСНО ТЕСТО ЗА ПИЦА", "basis": "€/кг", "avg_2025": 1.38, "avg_2026": 1.96, "change_pct": 42.4, "low_conf": false}, {"product": "ГЪБИ ПЕЧУРКА", "label": "ГЪБИ ПЕЧУРКА", "basis": "€/кг", "avg_2025": 6.12, "avg_2026": 3.71, "change_pct": -39.4, "low_conf": false}, {"product": "МИНИ ДИНЯ", "label": "МИНИ ДИНЯ", "basis": "€/кг", "avg_2025": 2.04, "avg_2026": 1.29, "change_pct": -36.8, "low_conf": true}, {"product": "БОРОВИНКИ", "label": "БОРОВИНКИ", "basis": "€/кг", "avg_2025": 7.72, "avg_2026": 10.4, "change_pct": 34.8, "low_conf": false}, {"product": "ПЪПЕШ МЕДЕНА РОСА КГ", "label": "ПЪПЕШ МЕДЕНА РОСА КГ", "basis": "€/кг", "avg_2025": 3.06, "avg_2026": 2.03, "change_pct": -33.7, "low_conf": false}, {"product": "КЮФТЕ МЛАД. ТЕЛЕШКО", "label": "КЮФТЕ МЛАД. ТЕЛЕШКО", "basis": "€/пакет", "avg_2025": 3.83, "avg_2026": 5.11, "change_pct": 33.4, "low_conf": true}, {"product": "КИВИ НА КГ", "label": "КИВИ НА КГ", "basis": "€/кг", "avg_2025": 4.6, "avg_2026": 3.06, "change_pct": -33.4, "low_conf": false}, {"product": "КАРТОФИ, ЧЕТКАНИ НА", "label": "КАРТОФИ, ЧЕТКАНИ НА", "basis": "€/кг", "avg_2025": 0.35, "avg_2026": 0.47, "change_pct": 33.2, "low_conf": false}, {"product": "МИТИ КАРТОФИ", "label": "МИТИ КАРТОФИ", "basis": "€/кг", "avg_2025": 1.35, "avg_2026": 0.92, "change_pct": -32.1, "low_conf": false}, {"product": "ПРЯСНО КРАВЕ МАСЛО", "label": "ПРЯСНО КРАВЕ МАСЛО", "basis": "€/пакет", "avg_2025": 3.06, "avg_2026": 2.09, "change_pct": -31.8, "low_conf": false}, {"product": "ТОРБИ ЗА СМЕТ", "label": "ТОРБИ ЗА СМЕТ", "basis": "€/кг", "avg_2025": 0.74, "avg_2026": 0.51, "change_pct": -30.7, "low_conf": false}, {"product": "КРОАСАН С КРЕНВИРШ", "label": "КРОАСАН С КРЕНВИРШ", "basis": "€/кг", "avg_2025": 0.71, "avg_2026": 0.92, "change_pct": 29.5, "low_conf": true}, {"product": "КАРФИОЛ НА КГ", "label": "КАРФИОЛ НА КГ", "basis": "€/кг", "avg_2025": 2.2, "avg_2026": 2.79, "change_pct": 26.6, "low_conf": false}, {"product": "СОС БЕШАМЕЛ", "label": "СОС БЕШАМЕЛ", "basis": "€/кг", "avg_2025": 2.04, "avg_2026": 1.5, "change_pct": -26.6, "low_conf": false}, {"product": "VASTON СЬОМГ.ПЪСТЪР", "label": "VASTON СЬОМГ.ПЪСТЪР", "basis": "€/кг", "avg_2025": 11.75, "avg_2026": 14.82, "change_pct": 26.1, "low_conf": true}, {"product": "ЯГОДИ 500Г ТАРЕЛКА", "label": "ЯГОДИ 500Г ТАРЕЛКА", "basis": "€/кг", "avg_2025": 5.1, "avg_2026": 3.81, "change_pct": -25.2, "low_conf": false}, {"product": "НЕМСКО МАСЛО", "label": "НЕМСКО МАСЛО", "basis": "€/кг", "avg_2025": 13.27, "avg_2026": 10.0, "change_pct": -24.7, "low_conf": false}, {"product": "ТИКВИЧКИ НА КГ", "label": "ТИКВИЧКИ НА КГ", "basis": "€/кг", "avg_2025": 2.04, "avg_2026": 1.54, "change_pct": -24.5, "low_conf": false}, {"product": "СВИНСКИ ВРАТ", "label": "СВИНСКИ ВРАТ", "basis": "€/кг", "avg_2025": 4.6, "avg_2026": 3.47, "change_pct": -24.5, "low_conf": true}, {"product": "ДИНЯ С МАЛКО СЕМ.КГ", "label": "ДИНЯ С МАЛКО СЕМ.КГ", "basis": "€/кг", "avg_2025": 1.32, "avg_2026": 1.64, "change_pct": 23.8, "low_conf": false}, {"product": "СВИНСКИ КЮФТЕТА", "label": "СВИНСКИ КЮФТЕТА", "basis": "€/кг", "avg_2025": 3.83, "avg_2026": 2.95, "change_pct": -23.0, "low_conf": true}, {"product": "СВИНСКИ КЕБАПЧЕТА", "label": "СВИНСКИ КЕБАПЧЕТА", "basis": "€/кг", "avg_2025": 3.83, "avg_2026": 2.95, "change_pct": -23.0, "low_conf": true}, {"product": "ПОПИВАТЕЛНИ КЪРПИ", "label": "ПОПИВАТЕЛНИ КЪРПИ", "basis": "€/кг", "avg_2025": 0.66, "avg_2026": 0.51, "change_pct": -22.1, "low_conf": false}, {"product": "JAMESON IRISH УИСКИ", "label": "JAMESON IRISH УИСКИ", "basis": "€/пакет", "avg_2025": 18.81, "avg_2026": 14.99, "change_pct": -20.3, "low_conf": true}, {"product": "КАРТОФИ, ЧЕРВ НА КГ", "label": "КАРТОФИ, ЧЕРВ НА КГ", "basis": "€/кг", "avg_2025": 1.27, "avg_2026": 1.02, "change_pct": -19.9, "low_conf": false}, {"product": "ДОМАТИ, РОЗОВИ НА КГ", "label": "ДОМАТИ, РОЗОВИ НА КГ", "basis": "€/кг", "avg_2025": 2.19, "avg_2026": 2.62, "change_pct": 19.4, "low_conf": false}, {"product": "GGN/MSC СУШИ SAPPORO", "label": "GGN/MSC СУШИ SAPPORO", "basis": "€/кг", "avg_2025": 6.13, "avg_2026": 7.15, "change_pct": 16.6, "low_conf": true}, {"product": "ЛУК, ЧЕРВЕН НА КГ", "label": "ЛУК, ЧЕРВЕН НА КГ", "basis": "€/кг", "avg_2025": 1.42, "avg_2026": 1.18, "change_pct": -16.6, "low_conf": false}, {"product": "КРАСТАВИЦИ ЗА БР", "label": "КРАСТАВИЦИ ЗА БР", "basis": "€/кг", "avg_2025": 0.69, "avg_2026": 0.8, "change_pct": 15.8, "low_conf": false}, {"product": "ЯГОДИ 250Г - ТАРЕЛКА", "label": "ЯГОДИ 250Г - ТАРЕЛКА", "basis": "€/кг", "avg_2025": 7.14, "avg_2026": 8.2, "change_pct": 14.9, "low_conf": false}, {"product": "МАСЛИНЕН МИКС Б.КОСТ", "label": "МАСЛИНЕН МИКС Б.КОСТ", "basis": "€/кг", "avg_2025": 0.86, "avg_2026": 0.99, "change_pct": 14.6, "low_conf": true}, {"product": "МИНИ ШОКОЛАДЧЕ", "label": "МИНИ ШОКОЛАДЧЕ", "basis": "€/пакет", "avg_2025": 0.71, "avg_2026": 0.81, "change_pct": 14.0, "low_conf": true}, {"product": "ЯБЪЛКИ ЗЕЛ.ЗЛАТН КГ", "label": "ЯБЪЛКИ ЗЕЛ.ЗЛАТН КГ", "basis": "€/кг", "avg_2025": 2.04, "avg_2026": 1.78, "change_pct": -12.7, "low_conf": false}, {"product": "ГЪБА КЛАДНИЦА", "label": "ГЪБА КЛАДНИЦА", "basis": "€/кг", "avg_2025": 8.16, "avg_2026": 9.2, "change_pct": 12.7, "low_conf": true}, {"product": "УЩИПЦИ С КАШКАВАЛ", "label": "УЩИПЦИ С КАШКАВАЛ", "basis": "€/кг", "avg_2025": 4.09, "avg_2026": 3.57, "change_pct": -12.6, "low_conf": true}, {"product": "MEAT REV ARG.RIBEYE", "label": "MEAT REV ARG.RIBEYE", "basis": "€/кг", "avg_2025": 10.68, "avg_2026": 12.01, "change_pct": 12.4, "low_conf": false}, {"product": "КРУШИ НА КГ", "label": "КРУШИ НА КГ", "basis": "€/кг", "avg_2025": 2.04, "avg_2026": 2.29, "change_pct": 12.4, "low_conf": false}, {"product": "МЕСО ЗA ГОТВ.ПИЛ.Ф", "label": "МЕСО ЗA ГОТВ.ПИЛ.Ф", "basis": "€/кг", "avg_2025": 3.83, "avg_2026": 3.39, "change_pct": -11.5, "low_conf": false}, {"product": "ГРОЗДЕ МИКС", "label": "ГРОЗДЕ МИКС", "basis": "€/пакет", "avg_2025": 3.14, "avg_2026": 2.79, "change_pct": -11.1, "low_conf": false}, {"product": "БИРЕНИ ПРЪЧИЦИ", "label": "БИРЕНИ ПРЪЧИЦИ", "basis": "€/кг", "avg_2025": 4.01, "avg_2026": 3.58, "change_pct": -10.8, "low_conf": false}, {"product": "ОБИКНОВЕНИ БИСКВИТИ", "label": "ОБИКНОВЕНИ БИСКВИТИ", "basis": "€/кг", "avg_2025": 1.23, "avg_2026": 1.36, "change_pct": 10.3, "low_conf": false}, {"product": "ПЪПЕШ ГАЛИЯ", "label": "ПЪПЕШ ГАЛИЯ", "basis": "€/кг", "avg_2025": 1.87, "avg_2026": 2.05, "change_pct": 10.0, "low_conf": false}, {"product": "ДЕЛИКАТЕСНА МАЙОНЕЗА", "label": "ДЕЛИКАТЕСНА МАЙОНЕЗА", "basis": "€/кг", "avg_2025": 2.43, "avg_2026": 2.67, "change_pct": 9.9, "low_conf": false}, {"product": "ВАНИЛ.СЛАД ВЪВ ВАЛФ", "label": "ВАНИЛ.СЛАД ВЪВ ВАЛФ", "basis": "€/кг", "avg_2025": 3.03, "avg_2026": 3.32, "change_pct": 9.4, "low_conf": false}, {"product": "ПРЯСНО ПИЛЕШКО ФИЛЕ", "label": "ПРЯСНО ПИЛЕШКО ФИЛЕ", "basis": "€/кг", "avg_2025": 6.12, "avg_2026": 5.56, "change_pct": -9.1, "low_conf": false}, {"product": "КАРТОФИ, МИТИ НА КГ", "label": "КАРТОФИ, МИТИ НА КГ", "basis": "€/кг", "avg_2025": 0.96, "avg_2026": 0.88, "change_pct": -8.6, "low_conf": false}, {"product": "СОЛЕТИ", "label": "СОЛЕТИ", "basis": "€/кг", "avg_2025": 0.57, "avg_2026": 0.52, "change_pct": -8.4, "low_conf": false}, {"product": "ГЕВРЕК СИР/СУС", "label": "ГЕВРЕК СИР/СУС", "basis": "€/кг", "avg_2025": 0.84, "avg_2026": 0.77, "change_pct": -8.1, "low_conf": false}, {"product": "ГРОЗДЕ, БЯЛО БЕЗ СЕМ", "label": "ГРОЗДЕ, БЯЛО БЕЗ СЕМ", "basis": "€/кг", "avg_2025": 2.55, "avg_2026": 2.76, "change_pct": 8.1, "low_conf": false}, {"product": "ДИРЕК.СОК АНАН.МАРАК", "label": "ДИРЕК.СОК АНАН.МАРАК", "basis": "€/кг", "avg_2025": 3.33, "avg_2026": 3.57, "change_pct": 7.1, "low_conf": false}, {"product": "ШУНКА ОТ ПТИЧЕ МЕСО", "label": "ШУНКА ОТ ПТИЧЕ МЕСО", "basis": "€/кг", "avg_2025": 5.78, "avg_2026": 6.18, "change_pct": 6.9, "low_conf": false}, {"product": "КЮФТЕ СТАРА ПЛАНИНА", "label": "КЮФТЕ СТАРА ПЛАНИНА", "basis": "€/пакет", "avg_2025": 3.83, "avg_2026": 3.57, "change_pct": -6.8, "low_conf": true}, {"product": "КАЙМА СМЕС 60/40", "label": "КАЙМА СМЕС 60/40", "basis": "€/кг", "avg_2025": 3.01, "avg_2026": 3.21, "change_pct": 6.8, "low_conf": false}, {"product": "ЦАРИГРАДСКИ КЮФТЕНЦА", "label": "ЦАРИГРАДСКИ КЮФТЕНЦА", "basis": "€/пакет", "avg_2025": 4.6, "avg_2026": 4.29, "change_pct": -6.7, "low_conf": false}, {"product": "ЗЛАТ ДОБРУД СОЛЕТИ К", "label": "ЗЛАТ ДОБРУД СОЛЕТИ К", "basis": "€/кг", "avg_2025": 0.26, "avg_2026": 0.28, "change_pct": 6.0, "low_conf": false}, {"product": "КАРТОФИ", "label": "КАРТОФИ", "basis": "€/кг", "avg_2025": 0.87, "avg_2026": 0.82, "change_pct": -5.9, "low_conf": false}, {"product": "МОРКОВИ", "label": "МОРКОВИ", "basis": "€/кг", "avg_2025": 1.68, "avg_2026": 1.78, "change_pct": 5.8, "low_conf": false}, {"product": "ИТ. СПЕЦИАЛ. С МЕСО", "label": "ИТ. СПЕЦИАЛ. С МЕСО", "basis": "€/кг", "avg_2025": 2.37, "avg_2026": 2.5, "change_pct": 5.4, "low_conf": false}, {"product": "SCHWEPPES PINK TOНИК", "label": "SCHWEPPES PINK TOНИК", "basis": "€/кг", "avg_2025": 1.41, "avg_2026": 1.48, "change_pct": 5.3, "low_conf": true}, {"product": "ИТАЛИАНСКИ СПЕЦИАЛИТ", "label": "ИТАЛИАНСКИ СПЕЦИАЛИТ", "basis": "€/кг", "avg_2025": 2.37, "avg_2026": 2.5, "change_pct": 5.2, "low_conf": false}, {"product": "ТОПЕНО СИРЕНЕ ПУШЕНО", "label": "ТОПЕНО СИРЕНЕ ПУШЕНО", "basis": "€/пакет", "avg_2025": 2.42, "avg_2026": 2.55, "change_pct": 5.2, "low_conf": false}, {"product": "ИТ.СПЕЦ-ДОМ.-МОЦАР", "label": "ИТ.СПЕЦ-ДОМ.-МОЦАР", "basis": "€/кг", "avg_2025": 2.31, "avg_2026": 2.43, "change_pct": 5.1, "low_conf": false}, {"product": "ПРЯСНО СИРЕНЕ", "label": "ПРЯСНО СИРЕНЕ", "basis": "€/кг", "avg_2025": 5.53, "avg_2026": 5.25, "change_pct": -5.0, "low_conf": false}, {"product": "ТРАПЕЗНА ВОДА", "label": "ТРАПЕЗНА ВОДА", "basis": "€/кг", "avg_2025": 0.56, "avg_2026": 0.58, "change_pct": 5.0, "low_conf": false}, {"product": "ЧУШКИ ЧЕРВ КАЛИФ. КГ", "label": "ЧУШКИ ЧЕРВ КАЛИФ. КГ", "basis": "€/кг", "avg_2025": 3.42, "avg_2026": 3.59, "change_pct": 5.0, "low_conf": false}, {"product": "ЯБЪЛКИ ЗЕЛ. БЪЛГ.КГ", "label": "ЯБЪЛКИ ЗЕЛ. БЪЛГ.КГ", "basis": "€/кг", "avg_2025": 1.43, "avg_2026": 1.36, "change_pct": -4.7, "low_conf": false}, {"product": "ФУСИЛИ ОТ МЕК.ПШ", "label": "ФУСИЛИ ОТ МЕК.ПШ", "basis": "€/кг", "avg_2025": 0.58, "avg_2026": 0.61, "change_pct": 4.7, "low_conf": false}, {"product": "ПРЕСНИ ЯЙЦА L,", "label": "ПРЕСНИ ЯЙЦА L,", "basis": "€/пакет", "avg_2025": 3.06, "avg_2026": 3.2, "change_pct": 4.5, "low_conf": false}, {"product": "ДУШГЕЛ400MLPUREFRESH", "label": "ДУШГЕЛ400MLPUREFRESH", "basis": "€/кг", "avg_2025": 1.32, "avg_2026": 1.27, "change_pct": -4.1, "low_conf": false}, {"product": "ДУШ ГЕЛ400ML LIME", "label": "ДУШ ГЕЛ400ML LIME", "basis": "€/кг", "avg_2025": 1.32, "avg_2026": 1.27, "change_pct": -4.1, "low_conf": false}, {"product": "СОК ОТ ЯБЪЛКА", "label": "СОК ОТ ЯБЪЛКА", "basis": "€/кг", "avg_2025": 2.6, "avg_2026": 2.5, "change_pct": -4.0, "low_conf": false}, {"product": "ALWAYS ULT.ДАМ.ПРЕВР", "label": "ALWAYS ULT.ДАМ.ПРЕВР", "basis": "€/пакет", "avg_2025": 4.42, "avg_2026": 4.59, "change_pct": 3.9, "low_conf": false}, {"product": "САЛАТА СЪС СИРЕНЕ", "label": "САЛАТА СЪС СИРЕНЕ", "basis": "€/кг", "avg_2025": 2.22, "avg_2026": 2.29, "change_pct": 3.6, "low_conf": false}, {"product": "СВИН. ВРАТ БЕЗ КОСТ", "label": "СВИН. ВРАТ БЕЗ КОСТ", "basis": "€/кг", "avg_2025": 5.18, "avg_2026": 5.36, "change_pct": 3.5, "low_conf": false}, {"product": "ОВЕСЕНИ ЯДКИ ФИНИ", "label": "ОВЕСЕНИ ЯДКИ ФИНИ", "basis": "€/кг", "avg_2025": 0.97, "avg_2026": 0.93, "change_pct": -3.4, "low_conf": false}, {"product": "СВИНСКИ ГЪРДИ", "label": "СВИНСКИ ГЪРДИ", "basis": "€/кг", "avg_2025": 7.43, "avg_2026": 7.66, "change_pct": 3.2, "low_conf": false}, {"product": "ИТ.СПЕЦ-РИКОТА-СПАН", "label": "ИТ.СПЕЦ-РИКОТА-СПАН", "basis": "€/пакет", "avg_2025": 2.45, "avg_2026": 2.37, "change_pct": -3.1, "low_conf": false}, {"product": "СВ.ВРАТ МЕКСИКО", "label": "СВ.ВРАТ МЕКСИКО", "basis": "€/кг", "avg_2025": 8.43, "avg_2026": 8.18, "change_pct": -3.0, "low_conf": true}, {"product": "КРАВЕ СИРЕНЕЗНП", "label": "КРАВЕ СИРЕНЕЗНП", "basis": "€/кг", "avg_2025": 10.54, "avg_2026": 10.22, "change_pct": -3.0, "low_conf": false}, {"product": "СОК ОТ ПОРТОКАЛ", "label": "СОК ОТ ПОРТОКАЛ", "basis": "€/кг", "avg_2025": 3.14, "avg_2026": 3.05, "change_pct": -3.0, "low_conf": false}, {"product": "БАНАНИ НА КГ", "label": "БАНАНИ НА КГ", "basis": "€/кг", "avg_2025": 1.68, "avg_2026": 1.73, "change_pct": 2.9, "low_conf": false}, {"product": "ПАНИРАН ПИЛ. ШНИЦЕЛ", "label": "ПАНИРАН ПИЛ. ШНИЦЕЛ", "basis": "€/кг", "avg_2025": 2.67, "avg_2026": 2.75, "change_pct": 2.9, "low_conf": false}, {"product": "ГАЩИЧКИ РАЗМЕР 5", "label": "ГАЩИЧКИ РАЗМЕР 5", "basis": "€/кг", "avg_2025": 9.71, "avg_2026": 9.97, "change_pct": 2.7, "low_conf": true}, {"product": "КРЕМ СИРЕНЕ КЛАСИК", "label": "КРЕМ СИРЕНЕ КЛАСИК", "basis": "€/кг", "avg_2025": 2.49, "avg_2026": 2.55, "change_pct": 2.5, "low_conf": false}, {"product": "ПРЕСНИ ЯЙЦА РАЗМ.L", "label": "ПРЕСНИ ЯЙЦА РАЗМ.L", "basis": "€/пакет", "avg_2025": 2.55, "avg_2026": 2.5, "change_pct": -2.2, "low_conf": false}, {"product": "БЛЕК АНГЪС СТЕК", "label": "БЛЕК АНГЪС СТЕК", "basis": "€/кг", "avg_2025": 8.01, "avg_2026": 8.18, "change_pct": 2.2, "low_conf": false}, {"product": "ОРИЗ СРЕДНОЗЪРНЕСТ", "label": "ОРИЗ СРЕДНОЗЪРНЕСТ", "basis": "€/пакет", "avg_2025": 1.6, "avg_2026": 1.57, "change_pct": -2.1, "low_conf": false}, {"product": "АНГЛИЙСКИ ЧЕДЪР", "label": "АНГЛИЙСКИ ЧЕДЪР", "basis": "€/кг", "avg_2025": 13.41, "avg_2026": 13.68, "change_pct": 2.0, "low_conf": false}, {"product": "КРЕНВИРШИ", "label": "КРЕНВИРШИ", "basis": "€/кг", "avg_2025": 3.38, "avg_2026": 3.31, "change_pct": -1.9, "low_conf": false}, {"product": "ПАСТЕТ ЗА ДЕЦА", "label": "ПАСТЕТ ЗА ДЕЦА", "basis": "€/кг", "avg_2025": 0.84, "avg_2026": 0.86, "change_pct": 1.8, "low_conf": false}, {"product": "ЧЕРЕШИ", "label": "ЧЕРЕШИ", "basis": "€/кг", "avg_2025": 4.56, "avg_2026": 4.48, "change_pct": -1.7, "low_conf": false}, {"product": "БИО ПЛОДОВА ЗАКУСКА", "label": "БИО ПЛОДОВА ЗАКУСКА", "basis": "€/кг", "avg_2025": 0.7, "avg_2026": 0.71, "change_pct": 1.5, "low_conf": false}, {"product": "ЧУВАЛ ЗА СМЕТ", "label": "ЧУВАЛ ЗА СМЕТ", "basis": "€/кг", "avg_2025": 0.88, "avg_2026": 0.89, "change_pct": 1.3, "low_conf": false}, {"product": "СЛЪНЧОГЛЕДОВО ОЛИО", "label": "СЛЪНЧОГЛЕДОВО ОЛИО", "basis": "€/кг", "avg_2025": 1.89, "avg_2026": 1.92, "change_pct": 1.2, "low_conf": false}, {"product": "КРАСТАВИЦИ НА КГ", "label": "КРАСТАВИЦИ НА КГ", "basis": "€/кг", "avg_2025": 2.39, "avg_2026": 2.41, "change_pct": 1.0, "low_conf": false}, {"product": "МИНИ ДЖОЛАНИ", "label": "МИНИ ДЖОЛАНИ", "basis": "€/кг", "avg_2025": 5.68, "avg_2026": 5.62, "change_pct": -1.0, "low_conf": false}, {"product": "QUANTUM СОВИН. БЛАН", "label": "QUANTUM СОВИН. БЛАН", "basis": "€/кг", "avg_2025": 5.62, "avg_2026": 5.67, "change_pct": 0.9, "low_conf": false}, {"product": "САЛАТА АЙСБЕРГ ЗА БР", "label": "САЛАТА АЙСБЕРГ ЗА БР", "basis": "€/кг", "avg_2025": 1.31, "avg_2026": 1.3, "change_pct": -0.8, "low_conf": false}, {"product": "KЮФТЕ С БЕКОН ЛУК", "label": "KЮФТЕ С БЕКОН ЛУК", "basis": "€/кг", "avg_2025": 2.81, "avg_2026": 2.79, "change_pct": -0.6, "low_conf": false}, {"product": "МЕКСИКО МИКС", "label": "МЕКСИКО МИКС", "basis": "€/кг", "avg_2025": 1.16, "avg_2026": 1.17, "change_pct": 0.5, "low_conf": false}, {"product": "КОПЪР", "label": "КОПЪР", "basis": "€/пакет", "avg_2025": 0.86, "avg_2026": 0.86, "change_pct": -0.5, "low_conf": true}, {"product": "СМЕС ОТ ЯДКИ, ПЪРЖЕН", "label": "СМЕС ОТ ЯДКИ, ПЪРЖЕН", "basis": "€/пакет", "avg_2025": 0.86, "avg_2026": 0.86, "change_pct": -0.5, "low_conf": false}, {"product": "КАЙМА 60/40 СТ.ПЛАН", "label": "КАЙМА 60/40 СТ.ПЛАН", "basis": "€/кг", "avg_2025": 4.09, "avg_2026": 4.07, "change_pct": -0.5, "low_conf": false}, {"product": "ГАЛЕТА", "label": "ГАЛЕТА", "basis": "€/пакет", "avg_2025": 0.95, "avg_2026": 0.95, "change_pct": 0.4, "low_conf": true}, {"product": "ЗАКВАСЕНА СМЕТАНА", "label": "ЗАКВАСЕНА СМЕТАНА", "basis": "€/кг", "avg_2025": 1.79, "avg_2026": 1.78, "change_pct": -0.4, "low_conf": false}, {"product": "КИСЕЛО КРАВЕ МЛЯКО", "label": "КИСЕЛО КРАВЕ МЛЯКО", "basis": "€/кг", "avg_2025": 0.79, "avg_2026": 0.79, "change_pct": -0.3, "low_conf": false}, {"product": "ЙОГУРТ ЧЕРЕША", "label": "ЙОГУРТ ЧЕРЕША", "basis": "€/кг", "avg_2025": 1.38, "avg_2026": 1.38, "change_pct": 0.3, "low_conf": false}, {"product": "ГЪБА ЗА СЪДОВЕ", "label": "ГЪБА ЗА СЪДОВЕ", "basis": "€/пакет", "avg_2025": 0.61, "avg_2026": 0.61, "change_pct": 0.3, "low_conf": false}, {"product": "ДЕТСКА ЧЕТКА ЗА ЗЪБИ", "label": "ДЕТСКА ЧЕТКА ЗА ЗЪБИ", "basis": "€/кг", "avg_2025": 1.02, "avg_2026": 1.02, "change_pct": 0.2, "low_conf": false}, {"product": "ГЕЛ ЗА МЪЖЕ ОВЛАЖН", "label": "ГЕЛ ЗА МЪЖЕ ОВЛАЖН", "basis": "€/кг", "avg_2025": 1.78, "avg_2026": 1.78, "change_pct": -0.2, "low_conf": true}, {"product": "КОЗМЕТИЧНИ КЪРПИЧКИ", "label": "КОЗМЕТИЧНИ КЪРПИЧКИ", "basis": "€/кг", "avg_2025": 1.27, "avg_2026": 1.27, "change_pct": -0.2, "low_conf": false}, {"product": "ПЕСТО ДЖЕНОВЕЗЕ", "label": "ПЕСТО ДЖЕНОВЕЗЕ", "basis": "€/кг", "avg_2025": 1.27, "avg_2026": 1.27, "change_pct": -0.2, "low_conf": false}, {"product": "ЧЕТКА ЗА ЗЪБИ КЛАС М", "label": "ЧЕТКА ЗА ЗЪБИ КЛАС М", "basis": "€/кг", "avg_2025": 0.76, "avg_2026": 0.76, "change_pct": -0.2, "low_conf": true}, {"product": "НИШЕСТЕ ЯГОДА", "label": "НИШЕСТЕ ЯГОДА", "basis": "€/кг", "avg_2025": 0.25, "avg_2026": 0.25, "change_pct": -0.2, "low_conf": false}, {"product": "СОЛЕТИ КЛАСИК", "label": "СОЛЕТИ КЛАСИК", "basis": "€/кг", "avg_2025": 0.74, "avg_2026": 0.74, "change_pct": -0.2, "low_conf": false}, {"product": "ТОРТИЛЯ ПИТКИ", "label": "ТОРТИЛЯ ПИТКИ", "basis": "€/пакет", "avg_2025": 1.48, "avg_2026": 1.48, "change_pct": 0.2, "low_conf": false}, {"product": "ALWAYS ULTRA SC.NIGH", "label": "ALWAYS ULTRA SC.NIGH", "basis": "€/кг", "avg_2025": 2.65, "avg_2026": 2.65, "change_pct": -0.1, "low_conf": false}, {"product": "ФУСИЛИ", "label": "ФУСИЛИ", "basis": "€/пакет", "avg_2025": 1.2, "avg_2026": 1.2, "change_pct": -0.1, "low_conf": false}, {"product": "КРАВЕ КАШКАВАЛ", "label": "КРАВЕ КАШКАВАЛ", "basis": "€/пакет", "avg_2025": 4.09, "avg_2026": 4.09, "change_pct": 0.1, "low_conf": true}, {"product": "ДИРЕКТЕН СОК", "label": "ДИРЕКТЕН СОК", "basis": "€/кг", "avg_2025": 4.09, "avg_2026": 4.09, "change_pct": 0.1, "low_conf": false}, {"product": "СИРОПИРАН СЛАДКИШ", "label": "СИРОПИРАН СЛАДКИШ", "basis": "€/кг", "avg_2025": 3.57, "avg_2026": 3.57, "change_pct": -0.1, "low_conf": false}, {"product": "КАШУ СУРОВО", "label": "КАШУ СУРОВО", "basis": "€/кг", "avg_2025": 3.57, "avg_2026": 3.57, "change_pct": -0.1, "low_conf": true}, {"product": "ШАМ ФЪСТЪК ОСОЛЕН", "label": "ШАМ ФЪСТЪК ОСОЛЕН", "basis": "€/пакет", "avg_2025": 3.57, "avg_2026": 3.57, "change_pct": -0.1, "low_conf": true}, {"product": "ЯДКИ СМЕСЕНИ", "label": "ЯДКИ СМЕСЕНИ", "basis": "€/кг", "avg_2025": 3.57, "avg_2026": 3.57, "change_pct": -0.1, "low_conf": false}, {"product": "МАНАТАРКИ НА КУБЧЕТА", "label": "МАНАТАРКИ НА КУБЧЕТА", "basis": "€/пакет", "avg_2025": 3.57, "avg_2026": 3.57, "change_pct": -0.1, "low_conf": true}, {"product": "СВИНСКА КАЙМА", "label": "СВИНСКА КАЙМА", "basis": "€/кг", "avg_2025": 2.81, "avg_2026": 2.81, "change_pct": 0.1, "low_conf": false}, {"product": "СЛАДОЛЕД ЩРУДЕЛ ТИР", "label": "СЛАДОЛЕД ЩРУДЕЛ ТИР", "basis": "€/пакет", "avg_2025": 3.06, "avg_2026": 3.06, "change_pct": -0.1, "low_conf": false}, {"product": "СЛАДОЛЕД ЩРУДЕЛ МАСК", "label": "СЛАДОЛЕД ЩРУДЕЛ МАСК", "basis": "€/пакет", "avg_2025": 3.06, "avg_2026": 3.06, "change_pct": -0.1, "low_conf": true}, {"product": "БАДЕМИ СУРОВИ", "label": "БАДЕМИ СУРОВИ", "basis": "€/кг", "avg_2025": 3.06, "avg_2026": 3.06, "change_pct": -0.1, "low_conf": true}, {"product": "Д.ПРЕВР.С АЛОЕ НОЩНИ", "label": "Д.ПРЕВР.С АЛОЕ НОЩНИ", "basis": "€/пакет", "avg_2025": 1.53, "avg_2026": 1.53, "change_pct": 0.1, "low_conf": false}, {"product": "ТИКВИЧКИ С МЛЯКО", "label": "ТИКВИЧКИ С МЛЯКО", "basis": "€/кг", "avg_2025": 1.53, "avg_2026": 1.53, "change_pct": 0.1, "low_conf": false}, {"product": "СОЛЕНКИ ПАНДЕЛКИ СИР", "label": "СОЛЕНКИ ПАНДЕЛКИ СИР", "basis": "€/кг", "avg_2025": 1.53, "avg_2026": 1.53, "change_pct": 0.1, "low_conf": false}, {"product": "ЕЖЕДН. ШАМП. БИЛКИ", "label": "ЕЖЕДН. ШАМП. БИЛКИ", "basis": "€/пакет", "avg_2025": 1.53, "avg_2026": 1.53, "change_pct": 0.1, "low_conf": false}, {"product": "ЕЖЕДН.ШАМП. ВИТАМИНИ", "label": "ЕЖЕДН.ШАМП. ВИТАМИНИ", "basis": "€/кг", "avg_2025": 1.53, "avg_2026": 1.53, "change_pct": 0.1, "low_conf": true}, {"product": "СОЛЕНКИ СЪС СИРЕНЕ", "label": "СОЛЕНКИ СЪС СИРЕНЕ", "basis": "€/кг", "avg_2025": 1.53, "avg_2026": 1.53, "change_pct": 0.1, "low_conf": false}, {"product": "БАНИЧКИ СЪС СИРЕНЕ", "label": "БАНИЧКИ СЪС СИРЕНЕ", "basis": "€/пакет", "avg_2025": 4.6, "avg_2026": 4.6, "change_pct": 0.1, "low_conf": true}, {"product": "ЧЕР.МАС.БЕЗ КОСТИЛКА", "label": "ЧЕР.МАС.БЕЗ КОСТИЛКА", "basis": "€/пакет", "avg_2025": 2.86, "avg_2026": 2.86, "change_pct": 0.1, "low_conf": false}, {"product": "ПЛ.БАРЧЕ ЯБЪЛКА,БАН", "label": "ПЛ.БАРЧЕ ЯБЪЛКА,БАН", "basis": "€/кг", "avg_2025": 0.66, "avg_2026": 0.66, "change_pct": 0.1, "low_conf": false}, {"product": "ПЛОД. БАРЧЕ С АРОНИЯ", "label": "ПЛОД. БАРЧЕ С АРОНИЯ", "basis": "€/кг", "avg_2025": 0.66, "avg_2026": 0.66, "change_pct": 0.1, "low_conf": false}, {"product": "ПЛ.БАРЧЕ КРУША,БАНАН", "label": "ПЛ.БАРЧЕ КРУША,БАНАН", "basis": "€/кг", "avg_2025": 0.66, "avg_2026": 0.66, "change_pct": 0.1, "low_conf": false}, {"product": "ФРЕНСКИ КИФЛИЧКИ", "label": "ФРЕНСКИ КИФЛИЧКИ", "basis": "€/кг", "avg_2025": 2.55, "avg_2026": 2.55, "change_pct": -0.1, "low_conf": false}, {"product": "ЗАМР.ЕКЗОТ.ПЛОД.АВОК", "label": "ЗАМР.ЕКЗОТ.ПЛОД.АВОК", "basis": "€/кг", "avg_2025": 2.55, "avg_2026": 2.55, "change_pct": -0.1, "low_conf": false}, {"product": "РИЗОТО ШАФРАН", "label": "РИЗОТО ШАФРАН", "basis": "€/пакет", "avg_2025": 2.55, "avg_2026": 2.55, "change_pct": -0.1, "low_conf": false}, {"product": "МАСКАРПОНЕ", "label": "МАСКАРПОНЕ", "basis": "€/кг", "avg_2025": 4.85, "avg_2026": 4.85, "change_pct": -0.0, "low_conf": false}, {"product": "ИТ. ДЕСЕРТ ТИРАМИСУ", "label": "ИТ. ДЕСЕРТ ТИРАМИСУ", "basis": "€/кг", "avg_2025": 5.11, "avg_2026": 5.11, "change_pct": 0.0, "low_conf": false}, {"product": "КАРТОФИ ПО СЕЛСКИ", "label": "КАРТОФИ ПО СЕЛСКИ", "basis": "€/кг", "avg_2025": 2.3, "avg_2026": 2.29, "change_pct": -0.0, "low_conf": false}, {"product": "ПАСИРАНИ ДОМАТИ", "label": "ПАСИРАНИ ДОМАТИ", "basis": "€/кг", "avg_2025": 1.12, "avg_2026": 1.12, "change_pct": 0.0, "low_conf": true}, {"product": "МЛАДА ЦАРЕВИЦА", "label": "МЛАДА ЦАРЕВИЦА", "basis": "€/кг", "avg_2025": 1.12, "avg_2026": 1.12, "change_pct": 0.0, "low_conf": false}, {"product": "МЕКО СИРЕНЕ С Ч. ПИП", "label": "МЕКО СИРЕНЕ С Ч. ПИП", "basis": "€/кг", "avg_2025": 21.93, "avg_2026": 21.93, "change_pct": -0.0, "low_conf": false}, {"product": "CHEF SEL.КОРДОН БЛЬО", "label": "CHEF SEL.КОРДОН БЛЬО", "basis": "€/кг", "avg_2025": 4.34, "avg_2026": 4.34, "change_pct": -0.0, "low_conf": false}, {"product": "ЧИЙЗБУРГЕР С ПИЛЕШКО", "label": "ЧИЙЗБУРГЕР С ПИЛЕШКО", "basis": "€/пакет", "avg_2025": 2.96, "avg_2026": 2.96, "change_pct": -0.0, "low_conf": true}, {"product": "ЗАМР.СЬОМГА ФИЛ.,Б.К", "label": "ЗАМР.СЬОМГА ФИЛ.,Б.К", "basis": "€/кг", "avg_2025": 11.5, "avg_2026": 11.5, "change_pct": 0.0, "low_conf": false}, {"product": "МАНДАРИНИ КЛЕМЕН КГ", "label": "МАНДАРИНИ КЛЕМЕН КГ", "basis": "€/кг", "avg_2025": 2.04, "avg_2026": 2.04, "change_pct": -0.0, "low_conf": true}, {"product": "МОЦАРЕЛА", "label": "МОЦАРЕЛА", "basis": "€/пакет", "avg_2025": 4.75, "avg_2026": 4.75, "change_pct": 0.0, "low_conf": false}];
+    var showTop = true;
+    var chartMode = 'diverging';
+
+    var cfg = {
+        responsive: true, displaylogo: false,
+        toImageButtonOptions: { format:'png', filename:'lidl_2025_2026', scale:2 }
+    };
+
+    function buildDiverging(data) {
+        var labels = data.map(r => r.label);
+        var vals   = data.map(r => r.change_pct);
+        var colors = vals.map(v => v > 0 ? (v > 20 ? '#b91c1c' : '#e87070') : (v < -20 ? '#15803d' : '#4ade80'));
+        var custom = data.map(r => [r.product, r.avg_2025, r.avg_2026, r.basis]);
+        return [{
+            type:'bar', orientation:'h',
+            y: labels, x: vals,
+            marker:{ color: colors },
+            customdata: custom,
+            hovertemplate:'<b>%{customdata[0]}</b><br>Промяна: <b>%{x:+.1f}%</b><br>2025: %{customdata[1]:.2f} € &nbsp; 2026: %{customdata[2]:.2f} €<br>Единица: %{customdata[3]}<extra></extra>'
+        }];
+    }
+
+    function buildGrouped(data) {
+        var labels = data.map(r => r.label);
+        var custom = data.map(r => r.product);
+        return [
+            { type:'bar', name:'2025', orientation:'h', y:labels, x:data.map(r=>r.avg_2025),
+               marker:{color:'#7fb3d3'}, customdata:custom,
+               hovertemplate:'<b>%{customdata}</b><br>2025: € %{x:.2f}<extra></extra>' },
+            { type:'bar', name:'2026', orientation:'h', y:labels, x:data.map(r=>r.avg_2026),
+               marker:{color:'#f0a500'}, customdata:custom,
+               hovertemplate:'<b>%{customdata}</b><br>2026: € %{x:.2f}<extra></extra>' }
+        ];
+    }
+
+    function drawChart() {
+        var data = showTop ? ALL.slice(0,20) : ALL;
+        data = data.slice().reverse();   // най-голяма промяна отгоре
+        var traces, layout;
+
+        if (chartMode === 'diverging') {
+            traces = buildDiverging(data);
+            var maxAbs = Math.max(0.1, ...data.map(r => Math.abs(r.change_pct)));
+            layout = {
+                title: { text: 'Промяна в цената (%) 2025 → 2026', x:0.5, xanchor:'center', font:{size:15} },
+                template:'plotly_white',
+                height: Math.max(380, data.length * 34 + 180),
+                xaxis: { title:'% промяна', zeroline:true, zerolinecolor:'#94a3b8', zerolinewidth:2,
+                          gridcolor:'#e2e8f0', range:[-maxAbs*1.25, maxAbs*1.35] },
+                yaxis: { gridcolor:'#e2e8f0', automargin:true, tickfont:{size:10} },
+                margin: { l:20, r:60, t:60, b:50 },
+                bargap: 0.18
+            };
+        } else {
+            traces = buildGrouped(data);
+            layout = {
+                title: { text: 'Средна цена 2025 vs 2026', x:0.5, xanchor:'center', font:{size:15} },
+                template:'plotly_white', barmode:'group',
+                height: Math.max(380, data.length * 48 + 200),
+                xaxis: { title:'Цена (€)', zeroline:false, gridcolor:'#e2e8f0' },
+                yaxis: { gridcolor:'#e2e8f0', automargin:true, tickfont:{size:10} },
+                margin: { l:20, r:40, t:60, b:50 },
+                legend: { orientation:'h', x:0.5, xanchor:'center', y:1.08 },
+                bargap: 0.2
+            };
+        }
+        Plotly.react('chart', traces, layout, cfg);
+    }
+
+    function showChart(mode) {
+        chartMode = mode;
+        document.querySelectorAll('.toggle-row button').forEach(b => {
+            if (b.textContent.startsWith('% ') || b.textContent.startsWith('2025')) b.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        drawChart();
+    }
+
+    function toggleTop() {
+        showTop = !showTop;
+        document.getElementById('btnTop').classList.toggle('active', showTop);
+        document.getElementById('btnAll').classList.toggle('active', !showTop);
+        drawChart();
+    }
+
+    drawChart();
+
+    // ── table filter & sort ─────────────────────────────────────────────────
+    var sortDir = {};
+    function filterTable() {
+        var q = document.getElementById('search').value.toLowerCase();
+        var hideWeak = document.getElementById('hideWeak').checked;
+        var rows = document.querySelectorAll('#tbody tr');
+        var vis = 0;
+        rows.forEach(function(tr) {
+            var txt = tr.cells[1].textContent.toLowerCase();
+            var weak = tr.cells[1].textContent.includes('⚠');
+            var show = txt.includes(q) && !(hideWeak && weak);
+            tr.style.display = show ? '' : 'none';
+            if (show) vis++;
+        });
+        document.getElementById('count').textContent = vis + ' / ' + rows.length + ' артикула';
+    }
+    filterTable();
+
+    function sortTable(col) {
+        var tbody = document.getElementById('tbody');
+        var rows = Array.from(tbody.querySelectorAll('tr'));
+        sortDir[col] = !sortDir[col];
+        rows.sort(function(a, b) {
+            var va = a.cells[col].textContent.trim();
+            var vb = b.cells[col].textContent.trim();
+            var na = parseFloat(va.replace(/[^\d.\-+]/g,''));
+            var nb = parseFloat(vb.replace(/[^\d.\-+]/g,''));
+            if (!isNaN(na) && !isNaN(nb)) return sortDir[col] ? na-nb : nb-na;
+            return sortDir[col] ? va.localeCompare(vb,'bg') : vb.localeCompare(va,'bg');
+        });
+        rows.forEach(r => tbody.appendChild(r));
+    }
+  </script>
+</body>
+</html>
