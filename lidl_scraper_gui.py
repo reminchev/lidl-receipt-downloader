@@ -34,6 +34,10 @@ class LidlGUI:
         self.config = load_config()
         self.output_dir = self.config["output_dir"]
         self.analysis_files = list(self.config.get("analysis_files", []))
+        self.db_path = self.config.get(
+            "db_path",
+            str(Path(__file__).resolve().parent / "lidl_local_prices.db"),
+        )
 
         self.setup_ui()
         self.load_saved_analysis_file()
@@ -132,6 +136,11 @@ class LidlGUI:
             frame, text="Анализ → XLSX + сезонен отчет",
             command=self.analyze_receipts,
         ).grid(row=1, column=0, columnspan=3, pady=8)
+
+        ttk.Button(
+            frame, text="Локална база данни → HTML",
+            command=self.generate_local_db_report,
+        ).grid(row=2, column=0, columnspan=3, pady=(0, 8))
 
     def _build_status_frame(self):
         frame = ttk.Frame(self.root, padding="10")
@@ -354,6 +363,17 @@ class LidlGUI:
         self.end_date_entry.config(state=tk.NORMAL)
 
     # ── Анализ ────────────────────────────────────────────────────────────────
+    def generate_local_db_report(self):
+        try:
+            analyzer = ReceiptAnalyzer(log=self.log_message, db_path=self.db_path)
+            report_path = f"{Path(self.output_dir).resolve() / 'local_price_history.html'}"
+            analyzer.generate_local_db_report(str(report_path))
+            self.log_message(f"Локална база данни → HTML: {report_path}")
+            messagebox.showinfo("Успех", f"Локалният отчет е създаден:\n\n{report_path}")
+        except Exception as e:
+            self.log_message(f"Грешка при създаване на локален отчет: {e}")
+            messagebox.showerror("Грешка", f"Неуспешно създаване на локален отчет:\n\n{e}")
+
     def analyze_receipts(self):
         if not self.analysis_files:
             self.choose_analysis_files()
@@ -368,7 +388,7 @@ class LidlGUI:
             return
 
         self.analysis_files = existing
-        analyzer = ReceiptAnalyzer(log=self.log_message)
+        analyzer = ReceiptAnalyzer(log=self.log_message, db_path=self.db_path)
 
         self.log_message(f"Стартиране на анализ на {len(self.analysis_files)} файла:")
         for file_path in self.analysis_files:
@@ -398,6 +418,14 @@ class LidlGUI:
             base_file = self.analysis_files[0]
             output_file = analyzer.generate_xlsx(filtered, base_file)
             chart_file = analyzer.generate_chart(output_file)
+            
+            base_output_dir = Path(self.output_dir).resolve()
+            self.log_message("")
+            self.log_message("📁 ФАЙЛОВЕ:")
+            if output_file:
+                self.log_message(f"  XLSX: {base_output_dir / Path(output_file).name}")
+            if chart_file:
+                self.log_message(f"  Графика: {base_output_dir / Path(chart_file).name}")
 
             fv_data = {
                 name: dates_prices
@@ -407,10 +435,33 @@ class LidlGUI:
             seasonal_file = None
             if fv_data:
                 self.log_message(f"Генериране на сезонен анализ за {len(fv_data)} плода/зеленчука...")
-                seasonal_file = f"{Path(base_file).stem}_seasonal_analysis.html"
+                seasonal_file = str(base_output_dir / f"{Path(base_file).stem}_seasonal_analysis.html")
                 analyzer.generate_seasonal_html(fv_data, seasonal_file)
+                self.log_message(f"  Сезонен анализ: {seasonal_file}")
             else:
                 self.log_message("Не са намерени плодове/зеленчуци за сезонен анализ")
+
+            years_rows = analyzer.compare_years(products_data)
+            years_file = None
+            if years_rows:
+                self.log_message(f"Генериране на сравнение 2025/2026 за {len(years_rows)} съпоставими артикула...")
+                years_file = str(base_output_dir / f"{Path(base_file).stem}_years_comparison.html")
+                analyzer.generate_years_html(years_rows, years_file)
+                self.log_message(f"  📊 Годишен отчет (2025/2026): {years_file}")
+            else:
+                self.log_message("Няма артикули с данни и за 2025, и за 2026")
+
+            # Генериране на лендинг страница
+            self.log_message("Генериране на лендинг страница...")
+            index_file = str(base_output_dir / f"{Path(base_file).stem}_index.html")
+            files_info = {
+                "xlsx": output_file,
+                "chart": chart_file,
+                "seasonal": seasonal_file,
+                "years": years_file,
+            }
+            analyzer.generate_index_html(index_file, files_info)
+            self.log_message(f"  🏠 Начална страница: {index_file}")
 
             self.update_status("Анализ завършен", "green")
             messagebox.showinfo(
@@ -418,10 +469,13 @@ class LidlGUI:
                 f"Анализът завърши успешно!\n\n"
                 f"Артикули с повече от 1 покупка: {len(filtered)}\n"
                 f"Общо уникални артикули: {len(products_data)}\n"
-                f"Плодове/зеленчуци за сезонен анализ: {len(fv_data)}\n\n"
+                f"Плодове/зеленчуци за сезонен анализ: {len(fv_data)}\n"
+                f"Съпоставими артикули 2025/2026: {len(years_rows)}\n\n"
                 f"XLSX: {os.path.basename(output_file)}\n"
                 f"Графика: {os.path.basename(chart_file) if chart_file else 'N/A'}\n"
-                f"Сезонен отчет: {os.path.basename(seasonal_file) if seasonal_file else 'N/A'}",
+                f"Сезонен отчет: {os.path.basename(seasonal_file) if seasonal_file else 'N/A'}\n"
+                f"Сравнение 2025/2026: {os.path.basename(years_file) if years_file else 'N/A'}\n"
+                f"Лендинг страница: {os.path.basename(index_file)}",
             )
         except Exception as e:
             self.log_message(f"Грешка при анализ: {e}")

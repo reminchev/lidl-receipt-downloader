@@ -10,9 +10,12 @@ from pathlib import Path
 CONFIG_DIR = Path.home() / ".lidl-receipts"
 CONFIG_PATH = CONFIG_DIR / "config.json"
 
+PROJECT_ROOT = Path(__file__).resolve().parent
+
 DEFAULTS = {
     "output_dir": str(Path.home() / "Documents"),
     "analysis_files": [],
+    "db_path": str(PROJECT_ROOT / "lidl_local_prices.db"),
 }
 
 

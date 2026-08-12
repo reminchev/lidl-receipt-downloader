@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <title>Lidl – Сравнение 2025/2026</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    *{ box-sizing:border-box; }
+    body{ font-family:'Segoe UI',Arial,sans-serif; margin:0; padding:16px 20px; background:#f4f6f9; color:#1e293b; }
+    h1{ margin:0 0 4px; font-size:20px; color:#1e3a5f; }
+    .sub{ color:#64748b; font-size:13px; margin-bottom:14px; }
+    .kpi-row{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+    .kpi{ background:white; border-radius:10px; padding:12px 18px; flex:1; min-width:140px;
+            box-shadow:0 1px 4px rgba(0,0,0,.08); border-left:4px solid #cbd5e1; }
+    .kpi.up{ border-color:#d64541; }
+    .kpi.dn{ border-color:#22c55e; }
+    .kpi.neutral{ border-color:#3b82f6; }
+    .kpi .val{ font-size:22px; font-weight:700; line-height:1.1; }
+    .kpi .lbl{ font-size:11px; color:#64748b; margin-top:2px; }
+    .card{ background:white; border-radius:10px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,.08); margin-bottom:16px; }
+    .toggle-row{ display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
+    button{ padding:6px 14px; border:1px solid #cbd5e1; border-radius:6px; cursor:pointer;
+             background:white; color:#334155; font-size:12px; transition:all .15s; }
+    button.active, button:hover{ background:#1e3a5f; color:white; border-color:#1e3a5f; }
+    input#search{ padding:6px 12px; border:1px solid #cbd5e1; border-radius:6px;
+                   font-size:12px; width:220px; outline:none; }
+    table{ width:100%; border-collapse:collapse; font-size:12px; }
+    thead tr{ background:#1e3a5f; color:white; }
+    th{ padding:9px 8px; border:1px solid #2d5080; cursor:pointer; user-select:none; white-space:nowrap; }
+    th:hover{ background:#2b5aa0; }
+    td{ border:1px solid #e2e8f0; padding:7px 8px; }
+    .note{ font-size:11px; color:#94a3b8; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <h1>Сравнение на цени Lidl: 2025 → 2026</h1>
+  <div class="sub">Сортирано по абсолютна промяна &nbsp;|&nbsp; ⚠ = само по 1 измерване (по-малко надеждно)</div>
+
+  <div class="kpi-row">
+    <div class="kpi neutral">
+      <div class="val">17</div>
+      <div class="lbl">сравнени артикула</div>
+    </div>
+    <div class="kpi up">
+      <div class="val">+25.0%</div>
+      <div class="lbl" style="color:#d64541">средна промяна</div>
+    </div>
+    <div class="kpi up">
+      <div class="val">13</div>
+      <div class="lbl">поскъпнали</div>
+    </div>
+    <div class="kpi dn">
+      <div class="val">4</div>
+      <div class="lbl">поевтинели</div>
+    </div>
+    <div class="kpi up">
+      <div class="val" title="БЕЛИ АСПЕРЖИ" style="font-size:14px;color:#d64541">+120.1%</div>
+      <div class="lbl">най-голямо поскъпване: БЕЛИ АСПЕРЖИ</div>
+    </div>
+    <div class="kpi dn">
+      <div class="val" title="СПАНАК" style="font-size:14px;color:#22c55e">-12.5%</div>
+      <div class="lbl">най-голямо поевтиняване: СПАНАК</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="toggle-row">
+      <button class="active" onclick="showChart('diverging')">% Промяна</button>
+      <button onclick="showChart('grouped')">2025 vs 2026</button>
+      <button id="btnTop" class="active" onclick="toggleTop()">Топ 20</button>
+      <button id="btnAll" onclick="toggleTop()">Всички (17)</button>
+    </div>
+    <div id="chart"></div>
+  </div>
+
+  <div class="card">
+    <div class="toggle-row">
+      <input id="search" type="text" placeholder="Търси артикул…" oninput="filterTable()">
+      <label style="font-size:12px;color:#64748b;margin-left:8px">
+        <input type="checkbox" id="hideWeak" onchange="filterTable()"> Скрий ниско-надеждни
+      </label>
+      <span id="count" style="margin-left:auto;font-size:12px;color:#94a3b8"></span>
+    </div>
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th onclick="sortTable(0)">#</th>
+          <th onclick="sortTable(1)">Артикул ↕</th>
+          <th onclick="sortTable(2)">Единица</th>
+          <th onclick="sortTable(3)">Ср. 2025 ↕</th>
+          <th onclick="sortTable(4)">Ср. 2026 ↕</th>
+          <th onclick="sortTable(5)">Промяна % ↕</th>
+          <th onclick="sortTable(6)">Изм. 2025</th>
+          <th onclick="sortTable(7)">Изм. 2026</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">1</td>
+              <td>БЕЛИ АСПЕРЖИ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">4.08 €</td>
+              <td style="text-align:right">8.98 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+120.1%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">2</td>
+              <td>ЗАМРАЗЕНИ ВИШНИ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">2.04 €</td>
+              <td style="text-align:right">4.09 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+100.5%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;opacity:0.65;">
+              <td style="text-align:center">3</td>
+              <td>ПРАЗ<span title="Само по 1 измерване" style="color:#aaa;font-size:10px"> ⚠</span></td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.78 €</td>
+              <td style="text-align:right">3.56 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+99.5%</td>
+              <td style="text-align:center;color:#999">1</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">4</td>
+              <td>ДОМАТИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.89 €</td>
+              <td style="text-align:right">2.49 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+31.7%</td>
+              <td style="text-align:center;color:#999">4</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">5</td>
+              <td>КРАСТАВИЦИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.39 €</td>
+              <td style="text-align:right">1.79 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+28.8%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">6</td>
+              <td>КАШКАВАЛ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">12.40 €</td>
+              <td style="text-align:right">14.20 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+14.5%</td>
+              <td style="text-align:center;color:#999">5</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">7</td>
+              <td>ЯБЪЛКИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.59 €</td>
+              <td style="text-align:right">1.79 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+12.6%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">8</td>
+              <td>СПАНАК</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">3.20 €</td>
+              <td style="text-align:right">2.80 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-12.5%</td>
+              <td style="text-align:center;color:#999">2</td>
+              <td style="text-align:center;color:#999">1</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">9</td>
+              <td>ПИЛЕ БУТЧЕТА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">4.40 €</td>
+              <td style="text-align:right">4.90 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+11.4%</td>
+              <td style="text-align:center;color:#999">4</td>
+              <td style="text-align:center;color:#999">4</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">10</td>
+              <td>КИСЕЛО МЛЯКО</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">0.89 €</td>
+              <td style="text-align:right">0.99 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+11.2%</td>
+              <td style="text-align:center;color:#999">6</td>
+              <td style="text-align:center;color:#999">5</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">11</td>
+              <td>ХЛЯБ ПЪЛНОЗЪРНЕСТ</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">1.89 €</td>
+              <td style="text-align:right">2.09 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+10.6%</td>
+              <td style="text-align:center;color:#999">4</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">12</td>
+              <td>МОРКОВИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">0.99 €</td>
+              <td style="text-align:right">0.89 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-10.1%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">13</td>
+              <td>КАЙМА</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">7.50 €</td>
+              <td style="text-align:right">8.20 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+9.3%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">14</td>
+              <td>БАНАНИ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">1.19 €</td>
+              <td style="text-align:right">1.09 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-8.4%</td>
+              <td style="text-align:center;color:#999">4</td>
+              <td style="text-align:center;color:#999">2</td>
+            </tr>
+            <tr style="background:#f3fff3;">
+              <td style="text-align:center">15</td>
+              <td>МАСЛО</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">2.69 €</td>
+              <td style="text-align:right">2.49 €</td>
+              <td style="text-align:center;font-weight:bold;color:#2ecc71">-7.4%</td>
+              <td style="text-align:center;color:#999">3</td>
+              <td style="text-align:center;color:#999">3</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">16</td>
+              <td>СИРЕНЕ</td>
+              <td style="text-align:center;color:#666">€/кг</td>
+              <td style="text-align:right">9.80 €</td>
+              <td style="text-align:right">10.50 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+7.1%</td>
+              <td style="text-align:center;color:#999">5</td>
+              <td style="text-align:center;color:#999">5</td>
+            </tr>
+            <tr style="background:#fff8f8;">
+              <td style="text-align:center">17</td>
+              <td>МЛЯКО 3.5%</td>
+              <td style="text-align:center;color:#666">€/пакет</td>
+              <td style="text-align:right">1.59 €</td>
+              <td style="text-align:right">1.69 €</td>
+              <td style="text-align:center;font-weight:bold;color:#d64541">+6.3%</td>
+              <td style="text-align:center;color:#999">6</td>
+              <td style="text-align:center;color:#999">6</td>
+            </tr></tbody>
+    </table>
+    <div class="note">Промяната е изчислена спрямо средна цена за годината. Продукти с 1 измерване са маркирани ⚠.</div>
+  </div>
+
+  <script>
+    var ALL = [{"product": "БЕЛИ АСПЕРЖИ", "label": "БЕЛИ АСПЕРЖИ", "basis": "€/кг", "avg_2025": 4.08, "avg_2026": 8.98, "change_pct": 120.1, "low_conf": true}, {"product": "ЗАМРАЗЕНИ ВИШНИ", "label": "ЗАМРАЗЕНИ ВИШНИ", "basis": "€/пакет", "avg_2025": 2.04, "avg_2026": 4.09, "change_pct": 100.5, "low_conf": true}, {"product": "ПРАЗ", "label": "ПРАЗ", "basis": "€/кг", "avg_2025": 1.78, "avg_2026": 3.56, "change_pct": 99.5, "low_conf": true}, {"product": "ДОМАТИ", "label": "ДОМАТИ", "basis": "€/кг", "avg_2025": 1.89, "avg_2026": 2.49, "change_pct": 31.7, "low_conf": false}, {"product": "КРАСТАВИЦИ", "label": "КРАСТАВИЦИ", "basis": "€/кг", "avg_2025": 1.39, "avg_2026": 1.79, "change_pct": 28.8, "low_conf": false}, {"product": "КАШКАВАЛ", "label": "КАШКАВАЛ", "basis": "€/кг", "avg_2025": 12.4, "avg_2026": 14.2, "change_pct": 14.5, "low_conf": false}, {"product": "ЯБЪЛКИ", "label": "ЯБЪЛКИ", "basis": "€/кг", "avg_2025": 1.59, "avg_2026": 1.79, "change_pct": 12.6, "low_conf": false}, {"product": "СПАНАК", "label": "СПАНАК", "basis": "€/кг", "avg_2025": 3.2, "avg_2026": 2.8, "change_pct": -12.5, "low_conf": false}, {"product": "ПИЛЕ БУТЧЕТА", "label": "ПИЛЕ БУТЧЕТА", "basis": "€/кг", "avg_2025": 4.4, "avg_2026": 4.9, "change_pct": 11.4, "low_conf": false}, {"product": "КИСЕЛО МЛЯКО", "label": "КИСЕЛО МЛЯКО", "basis": "€/пакет", "avg_2025": 0.89, "avg_2026": 0.99, "change_pct": 11.2, "low_conf": false}, {"product": "ХЛЯБ ПЪЛНОЗЪРНЕСТ", "label": "ХЛЯБ ПЪЛНОЗЪРНЕСТ", "basis": "€/пакет", "avg_2025": 1.89, "avg_2026": 2.09, "change_pct": 10.6, "low_conf": false}, {"product": "МОРКОВИ", "label": "МОРКОВИ", "basis": "€/кг", "avg_2025": 0.99, "avg_2026": 0.89, "change_pct": -10.1, "low_conf": false}, {"product": "КАЙМА", "label": "КАЙМА", "basis": "€/кг", "avg_2025": 7.5, "avg_2026": 8.2, "change_pct": 9.3, "low_conf": false}, {"product": "БАНАНИ", "label": "БАНАНИ", "basis": "€/кг", "avg_2025": 1.19, "avg_2026": 1.09, "change_pct": -8.4, "low_conf": false}, {"product": "МАСЛО", "label": "МАСЛО", "basis": "€/пакет", "avg_2025": 2.69, "avg_2026": 2.49, "change_pct": -7.4, "low_conf": false}, {"product": "СИРЕНЕ", "label": "СИРЕНЕ", "basis": "€/кг", "avg_2025": 9.8, "avg_2026": 10.5, "change_pct": 7.1, "low_conf": false}, {"product": "МЛЯКО 3.5%", "label": "МЛЯКО 3.5%", "basis": "€/пакет", "avg_2025": 1.59, "avg_2026": 1.69, "change_pct": 6.3, "low_conf": false}];
+    var showTop = true;
+    var chartMode = 'diverging';
+
+    var cfg = {
+        responsive: true, displaylogo: false,
+        toImageButtonOptions: { format:'png', filename:'lidl_2025_2026', scale:2 }
+    };
+
+    function buildDiverging(data) {
+        var labels = data.map(r => r.label);
+        var vals   = data.map(r => r.change_pct);
+        var colors = vals.map(v => v > 0 ? (v > 20 ? '#b91c1c' : '#e87070') : (v < -20 ? '#15803d' : '#4ade80'));
+        var custom = data.map(r => [r.product, r.avg_2025, r.avg_2026, r.basis]);
+        return [{
+            type:'bar', orientation:'h',
+            y: labels, x: vals,
+            marker:{ color: colors },
+            customdata: custom,
+            hovertemplate:'<b>%{customdata[0]}</b><br>Промяна: <b>%{x:+.1f}%</b><br>2025: %{customdata[1]:.2f} € &nbsp; 2026: %{customdata[2]:.2f} €<br>Единица: %{customdata[3]}<extra></extra>'
+        }];
+    }
+
+    function buildGrouped(data) {
+        var labels = data.map(r => r.label);
+        var custom = data.map(r => r.product);
+        return [
+            { type:'bar', name:'2025', orientation:'h', y:labels, x:data.map(r=>r.avg_2025),
+               marker:{color:'#7fb3d3'}, customdata:custom,
+               hovertemplate:'<b>%{customdata}</b><br>2025: € %{x:.2f}<extra></extra>' },
+            { type:'bar', name:'2026', orientation:'h', y:labels, x:data.map(r=>r.avg_2026),
+               marker:{color:'#f0a500'}, customdata:custom,
+               hovertemplate:'<b>%{customdata}</b><br>2026: € %{x:.2f}<extra></extra>' }
+        ];
+    }
+
+    function drawChart() {
+        var data = showTop ? ALL.slice(0,20) : ALL;
+        data = data.slice().reverse();   // най-голяма промяна отгоре
+        var traces, layout;
+
+        if (chartMode === 'diverging') {
+            traces = buildDiverging(data);
+            var maxAbs = Math.max(0.1, ...data.map(r => Math.abs(r.change_pct)));
+            layout = {
+                title: { text: 'Промяна в цената (%) 2025 → 2026', x:0.5, xanchor:'center', font:{size:15} },
+                template:'plotly_white',
+                height: Math.max(380, data.length * 34 + 180),
+                xaxis: { title:'% промяна', zeroline:true, zerolinecolor:'#94a3b8', zerolinewidth:2,
+                          gridcolor:'#e2e8f0', range:[-maxAbs*1.25, maxAbs*1.35] },
+                yaxis: { gridcolor:'#e2e8f0', automargin:true, tickfont:{size:10} },
+                margin: { l:20, r:60, t:60, b:50 },
+                bargap: 0.18
+            };
+        } else {
+            traces = buildGrouped(data);
+            layout = {
+                title: { text: 'Средна цена 2025 vs 2026', x:0.5, xanchor:'center', font:{size:15} },
+                template:'plotly_white', barmode:'group',
+                height: Math.max(380, data.length * 48 + 200),
+                xaxis: { title:'Цена (€)', zeroline:false, gridcolor:'#e2e8f0' },
+                yaxis: { gridcolor:'#e2e8f0', automargin:true, tickfont:{size:10} },
+                margin: { l:20, r:40, t:60, b:50 },
+                legend: { orientation:'h', x:0.5, xanchor:'center', y:1.08 },
+                bargap: 0.2
+            };
+        }
+        Plotly.react('chart', traces, layout, cfg);
+    }
+
+    function showChart(mode) {
+        chartMode = mode;
+        document.querySelectorAll('.toggle-row button').forEach(b => {
+            if (b.textContent.startsWith('% ') || b.textContent.startsWith('2025')) b.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        drawChart();
+    }
+
+    function toggleTop() {
+        showTop = !showTop;
+        document.getElementById('btnTop').classList.toggle('active', showTop);
+        document.getElementById('btnAll').classList.toggle('active', !showTop);
+        drawChart();
+    }
+
+    drawChart();
+
+    // ── table filter & sort ─────────────────────────────────────────────────
+    var sortDir = {};
+    function filterTable() {
+        var q = document.getElementById('search').value.toLowerCase();
+        var hideWeak = document.getElementById('hideWeak').checked;
+        var rows = document.querySelectorAll('#tbody tr');
+        var vis = 0;
+        rows.forEach(function(tr) {
+            var txt = tr.cells[1].textContent.toLowerCase();
+            var weak = tr.cells[1].textContent.includes('⚠');
+            var show = txt.includes(q) && !(hideWeak && weak);
+            tr.style.display = show ? '' : 'none';
+            if (show) vis++;
+        });
+        document.getElementById('count').textContent = vis + ' / ' + rows.length + ' артикула';
+    }
+    filterTable();
+
+    function sortTable(col) {
+        var tbody = document.getElementById('tbody');
+        var rows = Array.from(tbody.querySelectorAll('tr'));
+        sortDir[col] = !sortDir[col];
+        rows.sort(function(a, b) {
+            var va = a.cells[col].textContent.trim();
+            var vb = b.cells[col].textContent.trim();
+            var na = parseFloat(va.replace(/[^\d.\-+]/g,''));
+            var nb = parseFloat(vb.replace(/[^\d.\-+]/g,''));
+            if (!isNaN(na) && !isNaN(nb)) return sortDir[col] ? na-nb : nb-na;
+            return sortDir[col] ? va.localeCompare(vb,'bg') : vb.localeCompare(va,'bg');
+        });
+        rows.forEach(r => tbody.appendChild(r));
+    }
+  </script>
+</body>
+</html>

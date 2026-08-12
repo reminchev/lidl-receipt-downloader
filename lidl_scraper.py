@@ -3,6 +3,11 @@
 Работният поток използва ръчно влизане в браузъра (без съхранение на пароли):
 приложението отваря браузър, потребителят влиза и се позиционира на
 страницата с история на покупките, след което изтеглянето започва автоматично.
+
+За скорост:
+- тежките ресурси (изображения, медия, шрифтове) не се зареждат;
+- бележките от една страница се отварят паралелно в няколко раздела;
+- вместо `networkidle` и дълги паузи се чака бързо `domcontentloaded`.
 """
 
 import asyncio
@@ -11,6 +16,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, List, Optional
+from urllib.parse import urljoin
 
 from playwright.async_api import TimeoutError as PlaywrightTimeout
 
@@ -34,11 +40,9 @@ PURCHASE_SELECTORS = [
 
 RECEIPT_SELECTORS = ["main", "body"]
 
-NEXT_PAGE_SELECTOR = (
-    'button:has-text("Следваща"), a:has-text("Следваща"), '
-    'button:has-text("Next"), a:has-text("Next"), '
-    '[aria-label*="next"], .pagination-next, .next-page'
-)
+# Брой паралелни раздела при изтегляне на бележки от една страница
+MAX_CONCURRENT_TABS = 5
+PAGE_LOAD_TIMEOUT = 30000
 
 
 async def _first_matching(page, selectors: List[str]):
@@ -48,6 +52,14 @@ async def _first_matching(page, selectors: List[str]):
         if elements:
             return elements, selector
     return [], selectors[0]
+
+
+async def _skip_heavy_resources(route) -> None:
+    """Не зарежда изображения, медия и шрифтове (нямат значение за текста)."""
+    if route.request.resource_type in ("image", "media", "font"):
+        await route.abort()
+    else:
+        await route.continue_()
 
 
 class LidlReceiptDownloader:
@@ -93,11 +105,11 @@ class LidlReceiptDownloader:
         self.log("3. Натиснете 'Започни изтегляне' в приложението, когато сте готови")
         self.log("== ==")
 
-        await page.goto(LOGIN_URL, wait_until="networkidle")
+        await page.goto(LOGIN_URL, wait_until="domcontentloaded")
         self.log("Очакване на потребителя...")
 
         while not self.ready_to_start and not self.is_cancelled:
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(0.2)
 
         if not self.is_cancelled:
             self.start_time = time.time()
@@ -110,8 +122,16 @@ class LidlReceiptDownloader:
             f"&country_code=bg&language=bg-BG&page={page_num}"
         )
         self.log(f"Отваряне на история на покупките (страница {page_num})...")
-        await page.goto(url, wait_until="networkidle")
-        await asyncio.sleep(2)
+        await page.goto(url, wait_until="domcontentloaded", timeout=PAGE_LOAD_TIMEOUT)
+        await self._wait_purchase_links(page)
+
+    async def _wait_purchase_links(self, page, timeout: int = 15000) -> None:
+        """Чака покупките да се появят на страницата (има скрол-зареждане)."""
+        try:
+            await page.wait_for_selector(PURCHASE_SELECTORS[0], state="attached", timeout=timeout)
+        except PlaywrightTimeout:
+            pass
+        await asyncio.sleep(0.3)
 
     async def has_more_receipts(self, page) -> bool:
         """Проверява дали на страницата има покупки."""
@@ -120,6 +140,23 @@ class LidlReceiptDownloader:
             return bool(links)
         except Exception:
             return False
+
+    async def _purchase_urls(self, page) -> List[str]:
+        """Събира уникалните URL адреси на бележките от текущата страница."""
+        links, _ = await _first_matching(page, PURCHASE_SELECTORS)
+        if not links:
+            links = await page.query_selector_all('a[href*="purchase"], a[href*="receipt"]')
+
+        urls, seen = [], set()
+        for element in links:
+            href = await element.get_attribute("href")
+            if not href:
+                continue
+            full = urljoin(page.url, href)
+            if full not in seen:
+                seen.add(full)
+                urls.append(full)
+        return urls
 
     async def _extract_receipt_text(self, page) -> Optional[str]:
         """Връща текста на отворената бележка от някой от известните контейнери."""
@@ -131,85 +168,115 @@ class LidlReceiptDownloader:
                     return text.strip()
         return None
 
-    async def extract_receipts_from_page(self, page, page_number: int) -> int:
-        """Извлича бележките от текущата страница и връща броя на изтеглените."""
-        self.log("Извличане на касови бележки...")
-        await asyncio.sleep(3)
+    async def _store_receipt(self, text_content: str, page_number: int, index: int, total: int) -> int:
+        """Проверява датата, добавa бележката в списъка и връща 1 при успех."""
+        receipt_date = self.parse_receipt_date(text_content)
+        if not self.is_date_in_range(receipt_date):
+            date_info = f" ({receipt_date})" if receipt_date else ""
+            self.log(f"    Пропусната бележка {index}{date_info} - извън период")
+            return 0
 
-        purchase_elements, selector = await _first_matching(page, PURCHASE_SELECTORS)
-        if not purchase_elements:
-            purchase_elements = await page.query_selector_all(
-                'button, a[href*="purchase"], a[href*="receipt"]'
-            )
+        self.receipts.append(
+            {
+                "page_number": page_number,
+                "index": index,
+                "date": receipt_date,
+                "content": text_content,
+            }
+        )
+        date_info = f" ({receipt_date})" if receipt_date else ""
+        self.log(f"    Извлечена бележка {index}/{total}{date_info}")
+        self.log(f"    Общо изтеглени бележки: {len(self.receipts)}")
+        return 1
 
-        self.log(f"Намерени {len(purchase_elements)} покупки на тази страница")
+    async def _open_and_extract(self, context, url: str, page_number: int, index: int, total: int) -> int:
+        """Отваря бележката в отделен раздел и я извлича."""
+        if self.is_cancelled:
+            return 0
+        tab = await context.new_page()
+        try:
+            await tab.goto(url, wait_until="domcontentloaded", timeout=PAGE_LOAD_TIMEOUT)
+            try:
+                await tab.wait_for_selector("main", state="attached", timeout=5000)
+            except PlaywrightTimeout:
+                pass
+            await asyncio.sleep(0.4)
+
+            text_content = await self._extract_receipt_text(tab)
+            if not text_content:
+                self.log(f"    Бележка {index}/{total} е празна")
+                return 0
+            return await self._store_receipt(text_content, page_number, index, total)
+        except Exception as e:
+            self.log(f"  Грешка при изтегляне на бележка {index}: {e}")
+            return 0
+        finally:
+            await tab.close()
+
+    async def _download_batches(self, context, urls: List[str], page_number: int, total: int) -> int:
+        """Отваря бележките паралелно на групи и връща броя на изтеглените."""
         extracted = 0
-
-        for i in range(len(purchase_elements)):
+        for start in range(0, len(urls), MAX_CONCURRENT_TABS):
             if self.is_cancelled:
                 self.log("Процесът е прекъснат от потребителя")
                 break
+            batch = urls[start:start + MAX_CONCURRENT_TABS]
+            self.log(f"  Партида {(start // MAX_CONCURRENT_TABS) + 1}: {len(batch)} бележки паралелно...")
+            results = await asyncio.gather(
+                *(self._open_and_extract(context, url, page_number, idx, total)
+                  for idx, url in enumerate(batch, start=start + 1))
+            )
+            extracted += sum(results)
+        return extracted
 
+    async def _extract_sequentially(self, page, page_number: int) -> int:
+        """Резервен вариант: последователно кликване, ако няма href за бележката."""
+        purchase_elements, _ = await _first_matching(page, PURCHASE_SELECTORS)
+        total = len(purchase_elements)
+        self.log(f"Няма директни линкове, последователно извличане на {total} покупки...")
+        extracted = 0
+
+        for i in range(total):
+            if self.is_cancelled:
+                break
             try:
-                self.log(f"  Обработка на покупка {i + 1}/{len(purchase_elements)}...")
-                await asyncio.sleep(1)
-
                 elements, _ = await _first_matching(page, PURCHASE_SELECTORS)
                 if i >= len(elements):
-                    self.log("  Елементът вече не е достъпен, прескачане...")
                     continue
-
                 element = elements[i]
                 await element.scroll_into_view_if_needed()
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.2)
                 await element.click()
-                await asyncio.sleep(2)
-                await page.wait_for_load_state("networkidle", timeout=10000)
-                await asyncio.sleep(2)
+                await asyncio.sleep(1)
 
                 text_content = await self._extract_receipt_text(page)
-
                 if text_content:
-                    receipt_date = self.parse_receipt_date(text_content)
-                    if self.is_date_in_range(receipt_date):
-                        self.receipts.append(
-                            {
-                                "page_number": page_number,
-                                "index": i + 1,
-                                "date": receipt_date,
-                                "content": text_content,
-                            }
-                        )
-                        extracted += 1
-                        date_info = f" ({receipt_date})" if receipt_date else ""
-                        self.log(f"    Извлечена бележка {i + 1}{date_info}")
-                        self.log(f"    Общо изтеглени бележки: {len(self.receipts)}")
-                    else:
-                        date_info = f" ({receipt_date})" if receipt_date else ""
-                        self.log(f"    Пропусната бележка {i + 1}{date_info} - извън период")
-                else:
-                    self.log(f"    Бележка {i + 1} е празна")
+                    extracted += await self._store_receipt(text_content, page_number, i + 1, total)
 
                 await page.go_back()
-                await asyncio.sleep(2)
-                await page.wait_for_load_state("networkidle", timeout=10000)
-
-            except PlaywrightTimeout:
-                self.log(f"  Timeout при обработка на покупка {i + 1}, продължаване...")
-                try:
-                    await page.go_back()
-                    await asyncio.sleep(2)
-                except Exception:
-                    pass
+                await asyncio.sleep(0.5)
+                await page.wait_for_load_state("domcontentloaded", timeout=10000)
             except Exception as e:
                 self.log(f"  Грешка при обработка на покупка {i + 1}: {e}")
                 try:
                     await page.go_back()
-                    await asyncio.sleep(2)
                 except Exception:
                     pass
 
         return extracted
+
+    async def extract_receipts_from_page(self, page, page_number: int) -> int:
+        """Извлича бележките от текущата страница и връща броя на изтеглените."""
+        self.log("Извличане на касови бележки...")
+        await self._wait_purchase_links(page)
+
+        urls = await self._purchase_urls(page)
+        if not urls:
+            return await self._extract_sequentially(page, page_number)
+
+        total = len(urls)
+        self.log(f"Намерени {total} покупки на тази страница (паралелно изтегляне)")
+        return await self._download_batches(page.context, urls, page_number, total)
 
     async def check_current_page_number(self, page) -> int:
         """Извлича текущия номер на страницата от URL."""
@@ -230,6 +297,7 @@ class LidlReceiptDownloader:
                     "AppleWebKit/537.36"
                 ),
             )
+            await context.route("**/*", _skip_heavy_resources)
             page = await context.new_page()
 
             try:
