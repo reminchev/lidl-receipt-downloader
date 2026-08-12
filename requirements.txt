@@ -1,6 +1,5 @@
-playwright
-cryptography
-openpyxl
-matplotlib
-tkcalendar>=1.6.1
+playwright>=1.40.0
+openpyxl>=3.1.0
+matplotlib>=3.8.0
 plotly>=5.0.0
+tkcalendar>=1.6.1
