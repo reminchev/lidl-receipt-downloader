@@ -242,6 +242,41 @@ python lidl_scraper_gui.py
 
 ---
 
+## 🌐 GitHub Pages – Публикуване на Отчетите
+
+Генерираните отчети можете автоматично да публикувате на GitHub Pages! Отчетите ще бъдат налични на интернет под вашия GitHub профил.
+
+### 🚀 Бързо Настройка
+
+1. **Активирайте GitHub Pages** в Settings на репозиторита
+   - Отидете на **Settings** → **Pages**
+   - Изберете `main` браншa и папка `/ (root)` или `/docs`
+
+2. **Генерирайте отчетите** с приложението
+
+3. **Копирайте файловете** в папката `docs/reports/`
+
+4. **Направете push** към main браншa
+
+```bash
+# Копирайте генерираните файлове
+cp ~/Documents/lidl_receipts_*.html docs/reports/
+cp ~/Documents/lidl_receipts_*.xlsx docs/reports/
+
+# Направете commit и push
+git add docs/reports/
+git commit -m "Publish new price analysis reports"
+git push origin main
+```
+
+Отчетите ще бъдат налични на: `https://YOUR_USERNAME.github.io/lidl-receipt-downloader/`
+
+### 📖 Подробно Ръководство
+
+За детайлни инструкции вижте файла [GITHUB_PAGES.md](GITHUB_PAGES.md).
+
+---
+
 ## 🔒 Сигурност
 
 ⚠️ **ВАЖНО:**

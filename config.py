@@ -16,6 +16,9 @@ DEFAULTS = {
     "output_dir": str(Path.home() / "Documents"),
     "analysis_files": [],
     "db_path": str(PROJECT_ROOT / "lidl_local_prices.db"),
+    "github_pages_enabled": False,
+    "github_pages_dir": str(PROJECT_ROOT / "docs"),
+    "auto_publish_reports": False,
 }
 
 
