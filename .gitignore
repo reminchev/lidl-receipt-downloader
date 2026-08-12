@@ -29,15 +29,6 @@ lidl_receipts_*.txt
 # Локална конфигурация (потребителски пътища, НИКАКВИ пароли)
 config.json
 
-# GitHub Pages reports (опционално; по подразбиране се игнорира)
-# За да качите отчетите на GitHub Pages, отстранете комментара от редовете по-долу
-# docs/reports/
-# !docs/reports/.gitkeep
-
-# Но винаги включите главната страница
-!docs/index.html
-!docs/.nojekyll
-
 # IDE
 .vscode/
 .idea/
@@ -48,3 +39,8 @@ config.json
 # OS
 .DS_Store
 Thumbs.db
+
+# НО: GitHub Pages отчетите ТРЯБВА да бъдат включени!
+# Те се качват на GitHub Pages
+!docs/
+!docs/**
